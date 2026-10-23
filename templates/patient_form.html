@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}{{ '编辑档案' if patient else '新增病人' }} · 照护管理平台{% endblock %}
+{% block content %}
+<h5 class="fw-bold mb-3">{{ '✏️ 编辑档案：' + patient.name if patient else '＋ 新增病人档案' }}</h5>
+
+<form method="post" class="card">
+  <div class="card-body">
+    <div class="fw-semibold mb-2">基本信息</div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label">姓名 <span class="text-danger">*</span></label>
+        <input type="text" class="form-control form-control-sm" name="name" required
+               value="{{ patient.name if patient else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">性别</label>
+        <select class="form-select form-select-sm" name="sex">
+          <option value="">—</option>
+          <option {{ 'selected' if patient and patient.sex == '男' }}>男</option>
+          <option {{ 'selected' if patient and patient.sex == '女' }}>女</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">出生年份</label>
+        <input type="number" class="form-control form-control-sm" name="birth_year"
+               min="1900" max="{{ today[:4] }}" value="{{ patient.birth_year if patient else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">照护等级</label>
+        <select class="form-select form-select-sm" name="care_level">
+          {% for lv in CARE_LEVELS %}
+          <option {{ 'selected' if patient and patient.care_level == lv }}>{{ lv }}</option>
+          {% endfor %}
+        </select>
+        {% if patient and patient.care_level in LEVEL_TIP %}
+        <div class="small text-muted mt-1">{{ LEVEL_TIP[patient.care_level] }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="fw-semibold mb-2">病情与医疗</div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">主要诊断</label>
+        <input type="text" class="form-control form-control-sm" name="diagnosis"
+               placeholder="如 脑梗死后遗症、髋关节置换术后"
+               value="{{ patient.diagnosis or '' if patient else '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">过敏史</label>
+        <input type="text" class="form-control form-control-sm" name="allergies"
+               placeholder="如 青霉素过敏；无则留空"
+               value="{{ patient.allergies or '' if patient else '' }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label">病情概述 / 照护要点</label>
+        <textarea class="form-control form-control-sm" name="condition_desc" rows="2"
+                  placeholder="右侧肢体活动不便，进食需协助，睡前血压偏高……">{{ patient.condition_desc or '' if patient else '' }}</textarea>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">主治医生</label>
+        <input type="text" class="form-control form-control-sm" name="doctor"
+               value="{{ patient.doctor or '' if patient else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">医生电话</label>
+        <input type="text" class="form-control form-control-sm" name="doctor_phone"
+               value="{{ patient.doctor_phone or '' if patient else '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">医院</label>
+        <input type="text" class="form-control form-control-sm" name="hospital"
+               value="{{ patient.hospital or '' if patient else '' }}">
+      </div>
+    </div>
+
+    <div class="fw-semibold mb-2">紧急联系与照护开始</div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label">紧急联系人</label>
+        <input type="text" class="form-control form-control-sm" name="contact_name"
+               value="{{ patient.contact_name or '' if patient else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">联系电话</label>
+        <input type="text" class="form-control form-control-sm" name="contact_phone"
+               value="{{ patient.contact_phone or '' if patient else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">关系</label>
+        <input type="text" class="form-control form-control-sm" name="contact_relation"
+               placeholder="儿子 / 女儿 / 配偶"
+               value="{{ patient.contact_relation or '' if patient else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">开始照护日期</label>
+        <input type="date" class="form-control form-control-sm" name="start_date"
+               value="{{ patient.start_date or today if patient else today }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">当前体重（kg）</label>
+        <input type="number" step="0.1" class="form-control form-control-sm" name="weight_current"
+               value="{{ patient.weight_current or '' if patient else '' }}">
+      </div>
+    </div>
+
+    {% if patient %}
+    <div class="fw-semibold mb-2">照护状态</div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label">状态</label>
+        <select class="form-select form-select-sm" name="status">
+          {% for s in PATIENT_STATUS %}
+          <option {{ 'selected' if (patient.status or '在照护') == s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">状态变更备注</label>
+        <input type="text" class="form-control form-control-sm" name="status_note"
+               placeholder="选填，会写进变更流水">
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-3">
+      <label class="form-label">备注</label>
+      <textarea class="form-control form-control-sm" name="note" rows="2">{{ patient.note or '' if patient else '' }}</textarea>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-brand btn-sm">保存档案</button>
+      <a href="{{ url_for('patients') if patient else url_for('index') }}"
+         class="btn btn-outline-secondary btn-sm">取消</a>
+    </div>
+  </div>
+</form>
+
+{% if not patient %}
+<div class="alert alert-info small mt-3 mb-0">
+  💡 照护等级决定每天自动排哪些任务：<b>卧床</b>=翻身每2小时+皮肤检查；<b>全协助</b>=三餐+饮水；<b>半协助</b>=三餐+饮水；<b>自理</b>=只排用药。建档后可随时改。
+</div>
+{% endif %}
+{% endblock %}

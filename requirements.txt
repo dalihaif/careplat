@@ -1,0 +1,4 @@
+# 照护管理平台 依赖清单（无联网检索，去掉 bs4/lxml/requests）
+flask
+Pillow
+waitress

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>床头卡 · {{ patient.name }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #22312E; margin: 24px auto; max-width: 760px; padding: 0 16px;
+    background: #fff; font-size: 14px;
+  }
+  .head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #0F766E; padding-bottom: 10px; }
+  .head h1 { font-size: 26px; margin: 0; }
+  .head .sub { color: #55736D; font-size: 13px; }
+  .badge { display: inline-block; background: #0F766E; color: #fff; border-radius: 6px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .box { border: 1.5px solid #CFE3DF; border-radius: 10px; padding: 10px 12px; }
+  .box h3 { margin: 0 0 6px; font-size: 14px; color: #0B5D57; }
+  .box ul { margin: 0; padding-left: 18px; }
+  .box li { margin: 3px 0; line-height: 1.5; }
+  .alert { border: 2px solid #C0392B; background: #FDF4F3; border-radius: 10px; padding: 10px 12px; margin-top: 12px; color: #C0392B; font-weight: 600; }
+  .foot { margin-top: 16px; color: #6B807B; font-size: 12px; display: flex; justify-content: space-between; }
+  .big { font-size: 18px; font-weight: 700; }
+  @media print {
+    body { margin: 0; max-width: none; }
+    .noprint { display: none; }
+    .box, .alert { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="noprint" style="text-align:right;margin-bottom:8px">
+  <button onclick="window.print()" style="background:#0F766E;color:#fff;border:0;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer">🖨 打印这张卡</button>
+  <a href="#" onclick="history.back();return false" style="margin-left:8px;color:#0F766E">返回</a>
+</div>
+
+<div class="head">
+  <div>
+    <h1>{{ patient.name }} <span class="badge">{{ patient.care_level or '照护' }}</span>
+      {% if patient.sex %}<span class="badge" style="background:#55736D">{{ patient.sex }}</span>{% endif %}
+      {% if age %}<span class="badge" style="background:#55736D">{{ age }}</span>{% endif %}
+    </h1>
+    <div class="sub">{{ patient.diagnosis or '' }}{% if bed_days %} · 照护第 {{ bed_days }} 天{% endif %}</div>
+  </div>
+</div>
+
+{% if patient.allergies %}
+<div class="alert">⚠️ 过敏史：{{ patient.allergies }} —— 用药前必须核对！</div>
+{% endif %}
+
+<div class="grid">
+  <div class="box">
+    <h3>💊 每天吃什么药</h3>
+    {% if meds %}
+    <ul>
+      {% for m in meds %}
+      <li><b>{{ m.med_name }}</b> {{ m.dose or '' }}{{ m.form or '' }} · {{ m.times }}
+        {% if m.usage_txt %}（{{ m.usage_txt }}）{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <div style="margin-top:6px;font-weight:700;color:#C0392B">漏了的药怎么补，先问医生！</div>
+    {% else %}
+    <div>未登记药品</div>
+    {% endif %}
+  </div>
+
+  <div class="box">
+    <h3>🔄 每天例行任务</h3>
+    {% if task_summary %}
+    <ul>
+      {% for typ, times in task_summary.items() %}
+      <li><b>{{ {'turn':'翻身（左右轮换）','meal':'进餐','water':'饮水','skin':'皮肤检查'}[typ] if typ in ('turn','meal','water','skin') else typ }}</b>：
+        {{ times|join('　') }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div>无固定任务（按照护等级自动生成）</div>
+    {% endif %}
+  </div>
+
+  <div class="box">
+    <h3>🚨 出现这些立即打电话 / 120</h3>
+    <ul>
+      <li>叫不醒、说话不清、一侧手脚突然没力气</li>
+      <li>喘不上气、嘴唇发紫</li>
+      <li>高烧不退、抽搐、呕吐不止</li>
+      <li>摔倒（哪怕当时说没事）</li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h3>📞 紧急联系</h3>
+    <div class="big">{{ patient.contact_name or '—' }}　{{ patient.contact_phone or '' }}</div>
+    {% if patient.contact_relation %}<div>{{ patient.contact_relation }}</div>{% endif %}
+    <div style="margin-top:8px">
+      {% if patient.doctor %}主治医生：{{ patient.doctor }}{% endif %}
+      {% if patient.doctor_phone %}　<a href="tel:{{ patient.doctor_phone }}" style="color:#0F766E;text-decoration:none">{{ patient.doctor_phone }}</a>{% endif %}
+    </div>
+    {% if patient.hospital %}<div style="color:#55736D">{{ patient.hospital }}</div>{% endif %}
+  </div>
+
+  {% if patient.condition_desc %}
+  <div class="box" style="grid-column:1/-1">
+    <h3>📝 照护要点</h3>
+    <div>{{ patient.condition_desc }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="foot">
+  <span>{{ patient.name }} · 床头卡 · 打印日期 {{ today }}</span>
+  <span>照护管理平台 · 本地数据，注意保管</span>
+</div>
+
+</body>
+</html>

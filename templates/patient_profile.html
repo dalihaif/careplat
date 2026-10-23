@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 档案详情{% endblock %}
+
+{% block content %}
+{% set active = 'profile' %}
+{% include '_header.html' %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>🗂 基本信息</span>
+        <a href="{{ url_for('patient_edit', pid=patient.id) }}" class="btn btn-sm btn-outline-brand">编辑</a>
+      </div>
+      <div class="card-body py-2">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><td class="text-muted" style="width:110px">姓名</td><td>{{ patient.name }}{% if patient.sex %}（{{ patient.sex }}）{% endif %}{% if age %} · {{ age }}{% endif %}</td></tr>
+            <tr><td class="text-muted">照护等级</td><td>{{ patient.care_level or '—' }}
+              {% if patient.care_level in LEVEL_TIP %}<span class="small text-muted">{{ LEVEL_TIP[patient.care_level] }}</span>{% endif %}</td></tr>
+            <tr><td class="text-muted">主要诊断</td><td>{{ patient.diagnosis or '—' }}</td></tr>
+            <tr><td class="text-muted">过敏史</td><td>{{ patient.allergies or '—' }}</td></tr>
+            <tr><td class="text-muted">病情概述</td><td>{{ patient.condition_desc or '—' }}</td></tr>
+            <tr><td class="text-muted">主治医生</td><td>{{ patient.doctor or '—' }}
+              {% if patient.doctor_phone %}<a href="tel:{{ patient.doctor_phone }}">{{ patient.doctor_phone }}</a>{% endif %}
+              {% if patient.hospital %} · {{ patient.hospital }}{% endif %}</td></tr>
+            <tr><td class="text-muted">紧急联系</td><td>{{ patient.contact_name or '—' }}
+              {% if patient.contact_phone %}<a href="tel:{{ patient.contact_phone }}">{{ patient.contact_phone }}</a>{% endif %}
+              {{ patient.contact_relation or '' }}</td></tr>
+            <tr><td class="text-muted">开始照护</td><td>{{ patient.start_date or '—' }}{% if bed_days %} · 第 {{ bed_days }} 天{% endif %}</td></tr>
+            <tr><td class="text-muted">当前体重</td><td>{{ patient.weight_current or '—' }}{% if patient.weight_current %} kg（{{ patient.weight_updated_at or '' }} 更新）{% endif %}</td></tr>
+            {% if patient.note %}<tr><td class="text-muted">备注</td><td>{{ patient.note }}</td></tr>{% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>🏥 最近就诊 <span class="sub"><a href="{{ url_for('patient_medical', pid=patient.id) }}">全部 →</a></span></span>
+      </div>
+      <div class="card-body py-2">
+        {% for r in records %}
+        <div class="py-1 small" style="border-bottom:1px dashed var(--dp-line)">
+          <span class="chip brand">{{ r.kind or '记录' }}</span> {{ r.happen_date or '' }}
+          {% if r.hospital %} · {{ r.hospital }}{% endif %}
+          {% if r.summary %}<div class="text-muted">{{ r.summary }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="text-muted small py-2 text-center">还没有就诊记录</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>📖 最近日记 <span class="sub">共 {{ diary_n }} 篇 · <a href="{{ url_for('patient_diary', pid=patient.id) }}">全部 →</a></span></span>
+      </div>
+      <div class="card-body py-2">
+        {% for e in recent_diary %}
+        <div class="py-1 small" style="border-bottom:1px dashed var(--dp-line)">
+          <b>{{ e.day }}</b>
+          {% if e.mood %}{{ DIARY_MOOD_EMOJI.get(e.mood, '') }}{% endif %}
+          {{ e.title or '' }}
+          {% if e.media %}<span class="text-muted">· {{ e.media|length }} 个附件</span>{% endif %}
+          {% if e.content %}<div class="text-muted text-truncate">{{ e.content }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="text-muted small py-2 text-center">还没有日记</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if latest_vitals %}
+    <div class="card mb-3">
+      <div class="card-header">🩺 最近体征 <span class="sub">{{ latest_vitals.day }} {{ latest_vitals.time or '' }}</span></div>
+      <div class="card-body py-2">
+        <div class="row g-2 text-center">
+          {% for key, label, unit, lo, hi, ph in VITAL_DEFS %}
+          {% if latest_vitals[key] is not none %}
+          <div class="col-4">
+            <div class="stat">
+              <div class="v {{ 'text-danger' if judge(key, latest_vitals[key]) == 'danger' else ('text-warning' if judge(key, latest_vitals[key]) == 'warn' else '') }}"
+                   style="font-size:1.05rem">{{ latest_vitals[key] }}</div>
+              <div class="k">{{ label }} {{ unit }}</div>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <a href="{{ url_for('patient_vitals', pid=patient.id) }}" class="small">📈 查看趋势图 →</a>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-header">🧾 消费概览 <span class="sub"><a href="{{ url_for('patient_expense', pid=patient.id) }}">记账 →</a></span></div>
+      <div class="card-body py-2">
+        <div class="row g-2 text-center">
+          <div class="col-4"><div class="stat"><div class="v">¥{{ '%.0f'|format(expense.month) }}</div><div class="k">本月</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">¥{{ '%.0f'|format(expense.year) }}</div><div class="k">今年</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">¥{{ '%.0f'|format(expense.total) }}</div><div class="k">累计</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>📜 状态变更流水</span>
+        <span class="sub">在服药品 {{ med_n }} 种</span>
+      </div>
+      <div class="card-body py-2" style="max-height:300px;overflow:auto">
+        {% for l in status_log %}
+        <div class="py-1 small" style="border-bottom:1px dashed var(--dp-line)">
+          <b>{{ l.old_status }} → {{ l.new_status }}</b>
+          <span class="text-muted ms-1">{{ l.changed_at }}</span>
+          {% if l.note %}<div class="text-muted">📝 {{ l.note }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="text-muted small py-2 text-center">还没有变更记录</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{# ==================== 病人工作台头部（所有工作台页共用） ==================== #}
+{% set pstat = patient.status if patient.status else '在照护' %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+  <div class="d-flex align-items-center gap-3">
+    <div class="dog-avatar">{{ '👨‍🦳' if patient.sex == '男' else ('👩‍🦳' if patient.sex == '女' else '🧑') }}</div>
+    <div>
+      <h4 class="mb-0 fw-bold">{{ patient.name }}
+        {% if patient.sex %}<span class="chip">{{ patient.sex }}</span>{% endif %}
+        <span class="chip {{ STATUS_CHIP.get(pstat, '') }}">{{ pstat }}</span>
+        {% if patient.care_level %}<span class="chip brand">{{ patient.care_level }}</span>{% endif %}
+      </h4>
+      <div class="dog-meta">
+        {{ patient.diagnosis or '未填诊断' }} ·
+        {{ age if age else (patient.birth_year ~ ' 年生' if patient.birth_year else '年龄待补') }}
+        {% if patient.weight_current %} · {{ patient.weight_current }} kg{% endif %}
+        {% if pstat != '在照护' and patient.status_changed_at %} · 状态变更于 {{ patient.status_changed_at }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('patient_bedcard', pid=patient.id) }}" target="_blank" class="btn btn-outline-brand btn-sm">🖨 床头卡</a>
+    <button class="btn btn-outline-brand btn-sm"
+            data-patient='{{ {"id": patient.id, "name": patient.name, "status": pstat}|tojson }}'
+            onclick="openStatusModal(this)">改状态</button>
+    <a href="{{ url_for('patient_edit', pid=patient.id) }}" class="btn btn-outline-secondary btn-sm">编辑档案</a>
+    <a href="{{ url_for('patients') }}" class="btn btn-outline-secondary btn-sm">档案列表</a>
+  </div>
+</div>
+
+{% if pstat != '在照护' %}
+<div class="alert alert-secondary py-2 small mb-3">
+  这位病人当前状态为「<b>{{ pstat }}</b>」，已不再参与照护任务与提醒。
+  {% if patient.status_changed_at %}状态变更时间：{{ patient.status_changed_at }}。{% endif %}
+  历史记录仍可查看。
+</div>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3 flex-wrap">
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='today' }}" href="{{ url_for('patient_today', pid=patient.id) }}">📋 今日照护</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='meds' }}" href="{{ url_for('patient_meds', pid=patient.id) }}">💊 用药管理</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='vitals' }}" href="{{ url_for('patient_vitals', pid=patient.id) }}">📈 体征记录</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='rehab' }}" href="{{ url_for('patient_rehab', pid=patient.id) }}">💪 康复训练</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='records' }}" href="{{ url_for('patient_records', pid=patient.id) }}">📒 照护记录</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='diary' }}" href="{{ url_for('patient_diary', pid=patient.id) }}">📖 照护日记</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='expense' }}" href="{{ url_for('patient_expense', pid=patient.id) }}">💰 记账</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='medical' }}" href="{{ url_for('patient_medical', pid=patient.id) }}">🏥 医疗档案</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='weekly' }}" href="{{ url_for('patient_weekly', pid=patient.id) }}">📊 周报</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='profile' }}" href="{{ url_for('patient_profile', pid=patient.id) }}">🗂 档案详情</a></li>
+</ul>
+
+{% if alerts %}
+<div class="mb-3">
+  {% for a in alerts[:4] %}
+  <div class="alert-item {{ a.level }}">
+    <div class="t">{% if a.level == 'danger' %}❌{% else %}⚠️{% endif %} {{ a.title }}</div>
+    <div class="d">{{ a.detail }}</div>
+    <div class="a">👉 {{ a.action }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

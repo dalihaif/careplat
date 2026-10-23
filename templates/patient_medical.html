@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 医疗档案{% endblock %}
+
+{% block content %}
+{% set active = 'medical' %}
+{% include '_header.html' %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0">🏥 医疗档案 <span class="sub">就诊、检查、手术、复诊提醒</span></h5>
+  <button class="btn btn-brand btn-sm" onclick="openMedRecNew()">＋ 新增记录</button>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">🧳 复诊准备清单 <span class="sub">复制打印，出发前对着收拾</span></div>
+  <div class="card-body py-2">
+    <div class="d-flex gap-1 mb-2 flex-wrap">
+      <button class="btn btn-sm btn-brand" onclick="copyText('visitList', this)">📋 复制全文</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">🖨 打印</button>
+    </div>
+    <pre id="visitList" class="small mb-0" style="white-space:pre-wrap;background:#F2F7F6;border:1px solid var(--dp-line);border-radius:10px;padding:10px">{{ checklist }}</pre>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body py-2">
+    {% for r in rows %}
+    {% set due = r.next_due %}
+    <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px dashed var(--dp-line)">
+      <div class="small">
+        <span class="chip brand">{{ r.kind or '记录' }}</span>
+        <b class="ms-1">{{ r.happen_date or '日期待补' }}</b>
+        {% if r.hospital %}<span class="text-muted ms-1">· {{ r.hospital }}</span>{% endif %}
+        {% if r.doctor %}<span class="text-muted">· {{ r.doctor }}</span>{% endif %}
+        {% if r.summary %}<div class="mt-1">{{ r.summary }}</div>{% endif %}
+        {% if r.note %}<div class="text-muted">📝 {{ r.note }}</div>{% endif %}
+        {% if due %}
+        <div class="mt-1 {{ 'text-danger fw-bold' if due >= today and (due|length and due <= (today[:4] ~ '-12-31')) else '' }}">
+          🔔 下次复诊：{{ due }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="text-nowrap">
+        <button class="btn btn-sm btn-link text-brand p-0 px-1" data-rec='{{ r|tojson }}' onclick="openMedRecEdit(this)">编辑</button>
+        <button class="btn btn-sm btn-link text-danger p-0 px-1" onclick="delMedRec({{ r.id }})">删除</button>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-muted small py-4 text-center">
+      还没有就诊记录。出院小结、复查结论的要点记进来，下次看病直接翻这里。
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 就诊记录弹窗 -->
+<div class="modal fade" id="mcModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="mcTitle">＋ 新增就诊记录</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mcPatient" value="{{ patient.id }}">
+        <input type="hidden" id="mcId">
+        <div class="row g-2">
+          <div class="col-4"><label class="form-label">类型</label>
+            <select class="form-select form-select-sm" id="mcKind">
+              <option>门诊</option><option>住院</option><option>检查</option>
+              <option>手术</option><option>复诊</option>
+            </select></div>
+          <div class="col-4"><label class="form-label">发生日期</label>
+            <input type="date" class="form-control form-control-sm" id="mcHappen"></div>
+          <div class="col-4"><label class="form-label">下次复诊</label>
+            <input type="date" class="form-control form-control-sm" id="mcNext"></div>
+          <div class="col-6"><label class="form-label">医院</label>
+            <input type="text" class="form-control form-control-sm" id="mcHospital"></div>
+          <div class="col-6"><label class="form-label">医生</label>
+            <input type="text" class="form-control form-control-sm" id="mcDoctor"></div>
+          <div class="col-12"><label class="form-label">结论 / 医嘱摘要</label>
+            <textarea class="form-control form-control-sm" id="mcSummary" rows="2"
+                      placeholder="如：恢复良好，阿司匹林继续吃，3 个月后复查"></textarea></div>
+          <div class="col-12"><label class="form-label">备注</label>
+            <input type="text" class="form-control form-control-sm" id="mcNote"></div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-brand btn-sm" onclick="submitMedRec()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

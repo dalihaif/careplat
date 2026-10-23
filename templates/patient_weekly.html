@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 照护周报{% endblock %}
+
+{% block content %}
+{% set active = 'weekly' %}
+{% include '_header.html' %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h5 class="fw-bold mb-0">📊 近 {{ stats.days }} 天照护周报</h5>
+  <div class="btn-group btn-group-sm">
+    {% for d in (7, 14, 30) %}
+    <a class="btn {{ 'btn-brand' if d == stats.days else 'btn-outline-brand' }}"
+       href="{{ url_for('patient_weekly', pid=patient.id, days=d) }}">{{ d }} 天</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="fw-bold mb-1">综合评价：<span class="text-brand">{{ verdict }}</span></h5>
+    <div class="small text-muted">{{ verdict_desc }}</div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.pct }}%</div><div class="k">任务完成率（{{ stats.hit }}/{{ stats.total }}）</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.meds }}</div><div class="k">服药打卡</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.meals }}</div><div class="k">进餐记录</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.turns }}</div><div class="k">翻身次数</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.rehabs }}</div><div class="k">康复训练</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ (stats.ml / stats.days)|round(0, 'floor') if stats.ml else 0 }}</div><div class="k">日均饮水 ml</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.events }}</div><div class="k">记录总条数</div></div>
+  </div></div></div>
+  <div class="col-md-3 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats.days }}</div><div class="k">统计天数</div></div>
+  </div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">📤 一键转发周报 <span class="sub">发给在外地的家人</span></div>
+      <div class="card-body py-2">
+        <div class="d-flex gap-1 mb-2 flex-wrap">
+          <button class="btn btn-sm btn-brand" onclick="copyText('weekReport', this)">📋 复制全文</button>
+          <a class="btn btn-sm btn-outline-brand"
+             href="mailto:?subject={{ ('【照护周报】' ~ patient.name ~ ' 近' ~ cur_days ~ '天')|urlencode }}&body={{ report|urlencode }}">📧 邮件发送</a>
+          <a class="btn btn-sm btn-outline-brand" href="{{ url_for('patient_weekly_txt', pid=patient.id, days=cur_days) }}">⬇ 下载 txt</a>
+          <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">🖨 打印</button>
+        </div>
+        <pre id="weekReport" class="small mb-0" style="white-space:pre-wrap;background:#F2F7F6;border:1px solid var(--dp-line);border-radius:10px;padding:10px;max-height:260px;overflow:auto">{{ report }}</pre>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">📈 每日任务完成率</div>
+      <div class="card-body"><canvas id="pctChart" height="110"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header">💧 每日饮水量 (ml)</div>
+      <div class="card-body"><canvas id="mlChart" height="110"></canvas></div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">📅 逐日明细</div>
+      <div class="table-responsive" style="max-height:340px;overflow:auto">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>日期</th><th>完成</th><th>翻身</th><th>服药</th><th>饮水</th></tr></thead>
+          <tbody>
+            {% for d in stats.daily|reverse %}
+            <tr>
+              <td class="text-nowrap">{{ d.day[5:] }}</td>
+              <td>
+                <span class="chip {{ 'ok' if d.pct >= 80 else ('warn' if d.pct >= 50 else 'danger') }}">
+                  {{ d.hit }}/{{ d.total }}
+                </span>
+              </td>
+              <td>{{ d.turns or '—' }}</td>
+              <td>{{ d.meds or '—' }}</td>
+              <td>{{ d.ml or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">💡 下周建议</div>
+      <div class="card-body py-2 small">
+        {% for t in tips %}
+        <div class="mb-2">👉 {{ t }}</div>
+        {% endfor %}
+        <div class="text-muted mt-2">完成率低不一定是没做到，也可能是「做了没记」。先坚持记录一周再看。</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var stats = {{ stats_json|safe }};
+  new Chart(document.getElementById('pctChart'), {
+    type: 'bar',
+    data: {
+      labels: stats.days.map(function (d) { return d.slice(5); }),
+      datasets: [{ label: '完成率 %', data: stats.pct, backgroundColor: '#0F766E' }]
+    },
+    options: { plugins: { legend: { display: false } },
+               scales: { y: { suggestedMax: 100 }, x: { grid: { display: false } } } }
+  });
+  new Chart(document.getElementById('mlChart'), {
+    type: 'line',
+    data: {
+      labels: stats.days.map(function (d) { return d.slice(5); }),
+      datasets: [{ label: 'ml', data: stats.ml, borderColor: '#2C6E9B',
+                   backgroundColor: '#2C6E9B22', tension: .3, pointRadius: 2, spanGaps: true }]
+    },
+    options: { plugins: { legend: { display: false } },
+               scales: { y: { suggestedMin: 0, suggestedMax: 2000 }, x: { grid: { display: false } } } }
+  });
+});
+</script>
+{% endblock %}

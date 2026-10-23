@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 照护日记{% endblock %}
+
+{% block content %}
+{% set active = 'diary' %}
+{% include '_header.html' %}
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ stats }}</div><div class="k">日记篇数</div></div>
+  </div></div></div>
+  <div class="col-md-4 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ img_n }}</div><div class="k">照片</div></div>
+  </div></div></div>
+  <div class="col-md-4 col-6"><div class="card"><div class="card-body text-center py-2">
+    <div class="stat"><div class="v">{{ vid_n }}</div><div class="k">视频</div></div>
+  </div></div></div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('diary_new', pid=patient.id) }}" enctype="multipart/form-data">
+      <div class="row g-2">
+        <div class="col-md-3 col-6">
+          <label class="form-label">日期</label>
+          <input type="date" class="form-control form-control-sm" name="day" value="{{ today }}">
+        </div>
+        <div class="col-md-3 col-6">
+          <label class="form-label">状态</label>
+          <select class="form-select form-select-sm" name="mood">
+            <option value="">—</option>
+            {% for m, emoji in DIARY_MOODS %}<option value="{{ m }}">{{ emoji }} {{ m }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 col-6">
+          <label class="form-label">地点</label>
+          <input type="text" class="form-control form-control-sm" name="place" placeholder="家中 / 医院 / 康复科">
+        </div>
+        <div class="col-md-3 col-6">
+          <label class="form-label">标题</label>
+          <input type="text" class="form-control form-control-sm" name="title" placeholder="选填">
+        </div>
+        <div class="col-12">
+          <label class="form-label">内容</label>
+          <textarea class="form-control form-control-sm" name="content" rows="2"
+                    placeholder="今天状态怎么样、做了什么训练、有什么变化……"></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">照片 / 视频（可多选，单个请求上限 300MB）</label>
+          <input type="file" class="form-control form-control-sm" name="files" multiple
+                 accept="image/*,video/mp4,video/webm,video/quicktime">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-brand btn-sm">📝 保存日记</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-3 col-5">
+    <select class="form-select form-select-sm" name="month">
+      <option value="">全部月份</option>
+      {% for m in months %}
+      <option value="{{ m.m }}" {{ 'selected' if mon == m.m }}>{{ m.m }}（{{ m.c }}）</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3 col-5">
+    <input type="text" class="form-control form-control-sm" name="q" value="{{ kw }}" placeholder="搜标题 / 内容">
+  </div>
+  <div class="col-md-2 col-2">
+    <button class="btn btn-sm btn-outline-brand w-100">筛选</button>
+  </div>
+</form>
+
+{% for e in entries %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <b>{{ e.day }}</b>
+        {% if e.mood %}<span class="chip">{{ DIARY_MOOD_EMOJI.get(e.mood, '') }} {{ e.mood }}</span>{% endif %}
+        {% if e.place %}<span class="chip">{{ e.place }}</span>{% endif %}
+        {% if e.title %}<b class="ms-1">{{ e.title }}</b>{% endif %}
+      </div>
+      <div class="text-nowrap">
+        <button class="btn btn-sm btn-link text-brand p-0 px-1"
+                data-diary='{{ {"id": e.id, "day": e.day, "mood": e.mood, "place": e.place, "title": e.title, "content": e.content}|tojson }}'
+                onclick="openDiaryEdit(this)">编辑</button>
+        <form class="d-inline" method="post" action="{{ url_for('diary_delete', pid=patient.id, eid=e.id) }}"
+              onsubmit="return confirm('删除这篇日记？里面的照片视频也会一并删除。')">
+          <button class="btn btn-sm btn-link text-danger p-0 px-1">删除</button>
+        </form>
+      </div>
+    </div>
+    {% if e.content %}<div class="small mt-2" style="white-space:pre-wrap">{{ e.content }}</div>{% endif %}
+    {% if e.media %}
+    <div class="diary-grid mt-2">
+      {% for m in e.media %}
+      <div class="diary-cell">
+        {% if m.kind == 'image' %}
+        <a href="/media/{{ m.path }}" target="_blank">
+          <img src="/media/{{ m.thumb or m.path }}" class="diary-img" loading="lazy" alt="{{ m.orig_name }}">
+        </a>
+        {% else %}
+        <video src="/media/{{ m.path }}" controls preload="metadata" class="diary-img"></video>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center diary-cap">
+          <span class="text-truncate">{{ m.orig_name }}</span>
+          <button class="btn btn-sm btn-link text-danger p-0" onclick="delMedia({{ m.id }})">删</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-4">
+  还没有日记。记录恢复的过程，回头看会很有意义。
+</div></div>
+{% endfor %}
+
+{% if pages > 1 %}
+<nav>
+  <ul class="pagination pagination-sm justify-content-center">
+    {% for p in range(1, pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="{{ url_for('patient_diary', pid=patient.id, month=mon, q=kw, page=p) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endif %}
+
+<!-- 日记编辑弹窗 -->
+<div class="modal fade" id="diaryEditModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">✏️ 编辑日记</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="deId">
+        <div class="row g-2 mb-2">
+          <div class="col-4"><label class="form-label">日期</label>
+            <input type="date" class="form-control form-control-sm" id="deDay"></div>
+          <div class="col-4"><label class="form-label">状态</label>
+            <select class="form-select form-select-sm" id="deMood">
+              <option value="">—</option>
+              {% for m, emoji in DIARY_MOODS %}<option value="{{ m }}">{{ emoji }} {{ m }}</option>{% endfor %}
+            </select></div>
+          <div class="col-4"><label class="form-label">地点</label>
+            <input type="text" class="form-control form-control-sm" id="dePlace"></div>
+        </div>
+        <div class="mb-2"><label class="form-label">标题</label>
+          <input type="text" class="form-control form-control-sm" id="deTitle"></div>
+        <div><label class="form-label">内容</label>
+          <textarea class="form-control form-control-sm" id="deContent" rows="4"></textarea></div>
+        <div class="small text-muted mt-2">照片视频的增删回到日记卡片里单独操作。</div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-brand btn-sm" onclick="submitDiaryEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

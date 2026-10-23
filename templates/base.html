@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F766E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="照护">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon-32.png">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<title>{% block title %}照护管理平台{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg dp-nav sticky-top">
+  <div class="container-fluid dp-wrap">
+    <a class="navbar-brand" href="{{ url_for('index') }}">
+      <span class="dp-logo">🩺</span> 照护管理平台
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMain">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint=='index' }}" href="{{ url_for('index') }}">总览</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint in ('patients','patient_new') }}" href="{{ url_for('patients') }}">病人档案</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">照护工作台</a>
+          <ul class="dropdown-menu">
+            {% for p in all_patients %}
+            <li><a class="dropdown-item" href="{{ url_for('patient_today', pid=p.id) }}">🧑‍🦳 {{ p.name }}
+              <small class="text-muted">{{ p.diagnosis or '' }}</small></a></li>
+            {% else %}
+            <li><span class="dropdown-item-text text-muted">还没有登记病人</span></li>
+            {% endfor %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('patient_new') }}">＋ 新增病人</a></li>
+          </ul>
+        </li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint=='knowledge_page' }}" href="{{ url_for('knowledge_page') }}">照护知识</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint in ('settings_page',) }}" href="{{ url_for('settings_page') }}">通知设置</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if request.endpoint=='about_page' }}" href="{{ url_for('about_page') }}">关于</a></li>
+      </ul>
+      <span class="navbar-text small text-muted d-none d-lg-inline">{{ today }}</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid dp-wrap py-3">
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show py-2" role="alert">
+      {{ m }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<footer class="dp-foot">
+  <div class="dp-wrap">
+    <div class="dp-author mb-3">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="dp-author-avatar">🩺</div>
+        <div class="me-auto">
+          <div class="fw-bold">
+            {{ APP_NAME }} <span class="chip">{{ APP_VERSION }}</span>
+            <span class="small text-muted fw-normal ms-1">自 {{ APP_SINCE }}</span>
+          </div>
+          <div class="small dp-mute">
+            👤 作者：{{ AUTHOR.name }} · 🏢 {{ AUTHOR.org }} ·
+            📍 {{ AUTHOR.city }}
+          </div>
+          <div class="small dp-mute">
+            📱 <a href="tel:{{ AUTHOR.phone }}">{{ AUTHOR.phone }}</a> ·
+            ✉️ <a href="mailto:{{ AUTHOR.email }}">{{ AUTHOR.email }}</a> ·
+            <span class="d-inline-flex align-items-center gap-1">
+              <svg height="13" width="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                         0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
+                         1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+                         0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09
+                         2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87
+                         3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01
+                         0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              <a href="{{ AUTHOR.github_url }}" target="_blank" rel="noopener">{{ AUTHOR.github }}</a>
+            </span>
+          </div>
+        </div>
+        <a href="{{ url_for('about_page') }}" class="btn btn-outline-brand btn-sm">关于本平台</a>
+      </div>
+      {% if AUTHOR.slogan %}
+      <div class="small dp-mute mt-2">💡 {{ AUTHOR.slogan }}</div>
+      {% endif %}
+    </div>
+
+    <div class="row g-2 align-items-start">
+      <div class="col-md-8">
+        <div class="fw-semibold mb-1">⚠️ 免责声明</div>
+        <div class="small">{{ DISCLAIMER }}</div>
+      </div>
+      <div class="col-md-4 text-md-end small text-muted">
+        本地运行 · 数据只存在你自己的电脑上<br>
+        ⚠️ 平台无登录，仅供家庭局域网使用，不要映射到公网
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div id="installBar" class="dp-installbar" style="display:none">
+  <div>
+    <b>把平台装到手机桌面</b>
+    <div class="small">装完断网也能看档案和计划，图标一打开就能打卡</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-brand" id="installBtn">立即安装</button>
+    <button class="btn btn-sm btn-outline-secondary" id="installClose">下次</button>
+  </div>
+</div>
+
+{% include '_status_modal.html' %}
+
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+/* ---- PWA ---- */
+(function () {
+  var deferred = null;
+  var KEY = 'cp-install-dismissed';
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferred = e;
+    if (!localStorage.getItem(KEY)) {
+      document.getElementById('installBar').style.display = 'flex';
+    }
+  });
+
+  var ib = document.getElementById('installBtn');
+  if (ib) ib.addEventListener('click', function () {
+    if (!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.then(function () { deferred = null; });
+    document.getElementById('installBar').style.display = 'none';
+  });
+
+  var ic = document.getElementById('installClose');
+  if (ic) ic.addEventListener('click', function () {
+    localStorage.setItem(KEY, '1');
+    document.getElementById('installBar').style.display = 'none';
+  });
+
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || ['127.0.0.1', 'localhost'].includes(location.hostname) ||
+       /^192\.168\./.test(location.hostname))) {
+    navigator.serviceWorker.register('/sw.js').catch(function () { /* 静默失败 */ });
+  }
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

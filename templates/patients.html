@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}病人档案 · 照护管理平台{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h5 class="fw-bold mb-0">🗂 病人档案 <span class="chip">{{ total }}</span></h5>
+  <a href="{{ url_for('patient_new') }}" class="btn btn-brand btn-sm">＋ 新增病人</a>
+</div>
+
+<ul class="nav nav-pills gap-1 mb-3 flex-wrap">
+  <li class="nav-item"><a class="nav-link py-1 px-2 {{ 'active' if not sel }}" href="{{ url_for('patients') }}">全部</a></li>
+  {% for s in PATIENT_STATUS %}
+  <li class="nav-item"><a class="nav-link py-1 px-2 {{ 'active' if sel == s }}" href="{{ url_for('patients', status=s) }}">{{ s }} <span class="badge bg-light text-dark">{{ counts[s] }}</span></a></li>
+  {% endfor %}
+</ul>
+
+<div class="row g-3">
+  {% for p in patients %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card dog-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="dog-avatar">{{ '👨‍🦳' if p.sex == '男' else ('👩‍🦳' if p.sex == '女' else '🧑') }}</div>
+          <div class="me-auto">
+            <h6 class="dog-name">{{ p.name }}
+              <span class="chip {{ STATUS_CHIP.get(p.status, '') }}">{{ p.status }}</span>
+              {% if p.care_level %}<span class="chip brand">{{ p.care_level }}</span>{% endif %}
+            </h6>
+            <div class="dog-meta">
+              {{ p.diagnosis or '未填诊断' }}{% if p.age %} · {{ p.age }}{% endif %}
+              {% if p.weight_current %} · {{ p.weight_current }} kg{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="small text-muted">
+            {% if p.last_log %}最近变更：{{ p.last_log.new_status }} · {{ p.last_log.changed_at }}{% else %}无变更记录{% endif %}
+          </span>
+          <div class="d-flex gap-1">
+            <a href="{{ url_for('patient_today', pid=p.id) }}" class="btn btn-sm btn-outline-brand">工作台</a>
+            <a href="{{ url_for('patient_profile', pid=p.id) }}" class="btn btn-sm btn-outline-secondary">详情</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card"><div class="card-body text-center text-muted py-4">
+      还没有符合筛选条件的档案
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

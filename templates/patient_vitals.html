@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 体征记录{% endblock %}
+
+{% block content %}
+{% set active = 'vitals' %}
+{% include '_header.html' %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h5 class="fw-bold mb-0">📈 体征记录 <span class="sub">{{ VITAL_OK_TIP }}</span></h5>
+  <button class="btn btn-brand btn-sm" onclick="openVitals()">＋ 记录体征</button>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">🩸 血压趋势（近 30 天）</div>
+      <div class="card-body">
+        <canvas id="bpChart" height="110"></canvas>
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header py-1">🌡 体温</div>
+          <div class="card-body py-2"><canvas id="tempChart" height="90"></canvas></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header py-1">🫁 血氧</div>
+          <div class="card-body py-2"><canvas id="spo2Chart" height="90"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">📒 记录明细 <span class="sub">{{ rows|length }} 条（近 200 条）</span></div>
+      <div class="table-responsive" style="max-height:420px;overflow:auto">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr><th>日期</th><th>血压</th><th>心率</th><th>体温</th><th>血氧</th><th>血糖</th><th>体重</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr>
+              <td class="text-nowrap">{{ r.day }} {{ r.time or '' }}</td>
+              {% for key, label, unit, lo, hi, ph in VITAL_DEFS %}
+              {% if key not in ('weight',) %}
+              <td>
+                {% if r[key] is not none %}
+                <span class="{{ 'vital-bad' if judge(key, r[key]) == 'danger' else ('vital-warn' if judge(key, r[key]) == 'warn' else '') }}">{{ r[key] }}{{ {'bp_high':'','bp_low':'','hr':'','temp':'°','spo2':'%','sugar':''}[key] }}</span>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              {% endif %}
+              {% endfor %}
+              <td>{{ r.weight if r.weight is not none else '—' }}</td>
+              <td class="text-nowrap">
+                <button class="btn btn-sm btn-link text-brand p-0 px-1"
+                        data-vitals='{{ r|tojson }}' onclick="openVitalsEdit(this)">编辑</button>
+                <button class="btn btn-sm btn-link text-danger p-0 px-1" onclick="delVitals({{ r.id }})">删</button>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted py-3">还没有体征记录，点右上角「记录体征」开始</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if latest %}
+    <div class="card mb-3">
+      <div class="card-header">🩺 最近一次 <span class="sub">{{ latest.day }} {{ latest.time or '' }}</span></div>
+      <div class="card-body py-2">
+        <div class="row g-2">
+          {% for key, label, unit, lo, hi, ph in VITAL_DEFS %}
+          {% if latest[key] is not none %}
+          <div class="col-6 col-md-4">
+            <div class="stat">
+              <div class="v {{ 'text-danger' if judge(key, latest[key]) == 'danger' else ('text-warning' if judge(key, latest[key]) == 'warn' else '') }}"
+                   style="font-size:1.15rem">{{ latest[key] }}<small class="text-muted" style="font-size:.65rem">{{ unit }}</small></div>
+              <div class="k">{{ label }}</div>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% if latest.note %}<div class="small text-muted mt-2">📝 {{ latest.note }}</div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">⚠️ 什么时候要就医</div>
+      <div class="card-body py-2 small">
+        <div class="mb-2">🚨 <b>立即就医 / 120：</b>高压≥180 或 低压≥110、体温≥38.5 持续不退、血氧&lt;90、突然意识模糊、一侧肢体无力、说话不清。</div>
+        <div class="mb-2">📞 <b>当天联系医生：</b>高压 140-180、心率持续&gt;100 或&lt;60、血氧 90-95、血糖&lt;3.9（先给糖）或&gt;16.7。</div>
+        <div class="mb-0">📌 参考区间来自通用科普；如果医生给过个体化目标（比如放宽到多少），以医嘱为准。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 记录 / 编辑体征弹窗 -->
+<div class="modal fade" id="vtModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="vtTitle">＋ 记录体征</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="vtPatient" value="{{ patient.id }}">
+        <input type="hidden" id="vtId">
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">日期</label>
+            <input type="date" class="form-control form-control-sm" id="vtDay" value="{{ today }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label">时间</label>
+            <input type="time" class="form-control form-control-sm" id="vtTime">
+          </div>
+        </div>
+        <div class="row g-2">
+          <div class="col-4">
+            <label class="form-label">高压</label>
+            <input type="number" class="form-control form-control-sm" id="bp_high" placeholder="120">
+          </div>
+          <div class="col-4">
+            <label class="form-label">低压</label>
+            <input type="number" class="form-control form-control-sm" id="bp_low" placeholder="80">
+          </div>
+          <div class="col-4">
+            <label class="form-label">心率</label>
+            <input type="number" class="form-control form-control-sm" id="hr" placeholder="76">
+          </div>
+          <div class="col-4">
+            <label class="form-label">体温 ℃</label>
+            <input type="number" step="0.1" class="form-control form-control-sm" id="temp" placeholder="36.5">
+          </div>
+          <div class="col-4">
+            <label class="form-label">血氧 %</label>
+            <input type="number" class="form-control form-control-sm" id="spo2" placeholder="98">
+          </div>
+          <div class="col-4">
+            <label class="form-label">血糖</label>
+            <input type="number" step="0.1" class="form-control form-control-sm" id="sugar" placeholder="6.1">
+          </div>
+          <div class="col-4">
+            <label class="form-label">体重 kg</label>
+            <input type="number" step="0.1" class="form-control form-control-sm" id="weight" placeholder="62.5">
+          </div>
+          <div class="col-8">
+            <label class="form-label">备注</label>
+            <input type="text" class="form-control form-control-sm" id="vtNote" placeholder="晨起服药前 / 餐后2小时">
+          </div>
+        </div>
+        <div class="small text-muted mt-2">填一项也行。血压测前静坐 5 分钟，每天固定时间测最有对比价值。</div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-brand btn-sm" onclick="submitVitals()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var grid = { x: { grid: { display: false } }, y: { beginAtZero: false } };
+  var mk = function (id, label, data, color, yMax) {
+    var c = document.getElementById(id);
+    if (!c || !data.length) return;
+    new Chart(c, {
+      type: 'line',
+      data: {
+        labels: data.map(function (d) { return d[0]; }),
+        datasets: [{ label: label, data: data.map(function (d) { return d[1]; }),
+                     borderColor: color, backgroundColor: color + '33',
+                     tension: .3, pointRadius: 2, spanGaps: true }]
+      },
+      options: { plugins: { legend: { display: false } },
+                 scales: Object.assign({ y: { suggestedMax: yMax } }, grid) }
+    });
+  };
+  var bp = {{ bp_json|safe }};
+  if (bp.length) {
+    new Chart(document.getElementById('bpChart'), {
+      type: 'line',
+      data: {
+        labels: bp.map(function (d) { return d[0]; }),
+        datasets: [
+          { label: '高压', data: bp.map(function (d) { return d[1]; }),
+            borderColor: '#C0392B', backgroundColor: '#C0392B22', tension: .3, pointRadius: 2, spanGaps: true },
+          { label: '低压', data: bp.map(function (d) { return d[2]; }),
+            borderColor: '#2C6E9B', backgroundColor: '#2C6E9B22', tension: .3, pointRadius: 2, spanGaps: true }
+        ]
+      },
+      options: { plugins: { legend: { position: 'bottom' } },
+                 scales: { y: { suggestedMin: 40, suggestedMax: 180 }, x: { grid: { display: false } } } }
+    });
+  } else {
+    document.getElementById('bpChart').closest('.card-body').innerHTML =
+      '<div class="text-muted small text-center py-3">还没有血压记录</div>';
+  }
+  mk('tempChart', '体温', {{ temp_json|safe }}, '#C77700', 38.5);
+  mk('spo2Chart', '血氧', {{ spo2_json|safe }}, '#0F766E', 100);
+});
+</script>
+{% endblock %}

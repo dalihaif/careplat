@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 今日照护{% endblock %}
+
+{% block content %}
+{% set active = 'today' %}
+{% include '_header.html' %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>📋 {{ day }} 时间表 <span class="sub" id="ckProgress">{{ hit }}/{{ total }} 已完成</span></span>
+        <form class="d-flex gap-1" method="get">
+          <input type="date" name="day" value="{{ day }}" class="form-control form-control-sm" style="width:150px">
+          <button class="btn btn-sm btn-outline-brand">切换</button>
+        </form>
+      </div>
+      <div class="card-body py-2">
+        <div class="progress mb-3" style="height:7px">
+          <div class="progress-bar" id="ckBar" style="width:{{ (hit/total*100)|round if total else 0 }}%"></div>
+        </div>
+
+        {% if not timeline %}
+        <div class="text-muted small py-3 text-center">
+          今天没有计划任务。{{ '照护等级为「自理」只排用药——去用药管理里加药品时间表。' if level == '自理' else '' }}
+        </div>
+        {% endif %}
+
+        <div class="tl">
+          {% for it in timeline %}
+          <div class="tl-item {{ 'done' if it.done }}" data-key="{{ it.key }}">
+            <div class="tl-time">{{ it.time }}</div>
+            <div class="tl-body">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="tl-kind k-{{ it.type }}">{{ EVENT_LABEL.get(it.type, it.type) }}</span>
+                <span class="tl-title">{{ it.title }}</span>
+                {% if it.done %}<span class="chip ok">✅ 已完成</span>{% endif %}
+              </div>
+              <div class="tl-detail">{{ it.detail }}</div>
+            </div>
+            <div class="d-flex gap-1">
+              {% if it.done %}
+              <button class="btn btn-sm btn-outline-secondary" disabled>✓</button>
+              {% else %}
+              <button class="btn btn-sm btn-brand" title="一键记完成"
+                      onclick="quickDone(this)"
+                      data-kind="{{ it.type }}" data-time="{{ it.time }}" data-day="{{ day }}"
+                      data-key="{{ it.key }}">✓</button>
+              <button class="btn btn-sm btn-outline-brand" title="详细记录"
+                      data-kind="{{ it.type }}" data-time="{{ it.time }}" data-day="{{ day }}"
+                      data-key="{{ it.key }}"
+                      {% if it.type == 'med' %}data-def="{{ it.def_name }}|{{ it.def_dose }}"{% endif %}
+                      onclick="openCheckin(this)">📝</button>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>📌 临时记录</span>
+        <span class="sub">计划外的动作记这里</span>
+      </div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <button class="btn btn-sm btn-outline-brand" data-kind="meal" data-day="{{ day }}" onclick="openCheckin(this)">🍚 加餐</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="water" data-day="{{ day }}" onclick="openCheckin(this)">💧 饮水</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="potty" data-day="{{ day }}" onclick="openCheckin(this)">🚽 排泄</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="rehab" data-day="{{ day }}" onclick="openCheckin(this)">💪 康复</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="weight" data-day="{{ day }}" onclick="openCheckin(this)">⚖️ 体重</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="bath" data-day="{{ day }}" onclick="openCheckin(this)">🛁 洗澡</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="handover" data-day="{{ day }}" onclick="openCheckin(this)">🤝 交接班</button>
+        <button class="btn btn-sm btn-outline-brand" data-kind="note" data-day="{{ day }}" onclick="openCheckin(this)">📝 备注</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">🧑‍🦳 照护速览 <span class="sub">{{ level }}</span></div>
+      <div class="card-body py-2">
+        <div class="row g-2 text-center mb-2">
+          <div class="col-4"><div class="stat"><div class="v">{{ bed_days or '—' }}</div><div class="k">照护天数</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v" style="font-size:1rem;padding-top:6px">{{ meds|length }}</div><div class="k">在服药品</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v" style="font-size:1rem;padding-top:6px">{{ patient.weight_current or '—' }}</div><div class="k">体重 kg</div></div></div>
+        </div>
+        {% if patient.condition_desc %}
+        <div class="small mb-1"><b>照护要点：</b>{{ patient.condition_desc }}</div>
+        {% endif %}
+        {% if patient.allergies %}
+        <div class="small text-danger mb-1"><b>⚠️ 过敏史：</b>{{ patient.allergies }}</div>
+        {% endif %}
+        <div class="small mb-0"><b>紧急联系：</b>{{ patient.contact_name or '—' }}
+          {{ patient.contact_relation or '' }} {% if patient.contact_phone %}<a href="tel:{{ patient.contact_phone }}">{{ patient.contact_phone }}</a>{% endif %}</div>
+        {% if level_tip %}
+        <div class="small text-muted mt-2">{{ level_tip }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if meds %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span>💊 今天的药</span>
+        <a href="{{ url_for('patient_meds', pid=patient.id) }}" class="sub">用药管理 →</a>
+      </div>
+      <div class="card-body py-2">
+        {% for m in meds %}
+        <div class="med-chip"><b>{{ m.med_name }}</b> {{ m.dose or '' }}{{ m.form or '' }} · {{ m.times }}</div>
+        {% endfor %}
+        <div class="small text-muted mt-1">漏了的药怎么补，先问医生，不要自行加倍。</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <span>🕐 {{ day }} 已记录</span>
+        <span class="sub">{{ events|length }} 条 · <a href="{{ url_for('patient_records', pid=patient.id) }}">全部记录</a></span>
+      </div>
+      <div class="card-body py-2" style="max-height:420px;overflow:auto">
+        {% for e in events %}
+        {% set ejson = {'id': e.id, 'type': e.type, 'day': e.day, 'time': e.time, 'note': e.note or '', 'by': e.by or '', 'data': e.data} %}
+        <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px dashed var(--dp-line)">
+          <div class="small">
+            <span class="tl-kind k-{{ e.type }}">{{ EVENT_LABEL.get(e.type, e.type) }}</span>
+            <b class="ms-1">{{ e.time }}</b>
+            {% if e.by %}<span class="text-muted ms-1">· {{ e.by }}</span>{% endif %}
+            <span class="text-muted ms-2">
+              {% if e.type == 'turn' %}{{ e.data.get('side','') }}{% if e.data.get('skin') %} · 皮肤:{{ e.data.get('skin') }}{% endif %}
+              {% elif e.type == 'meal' %}{{ e.data.get('food','') }}{% if e.data.get('eaten') %} · 吃了{{ e.data.get('eaten') }}{% endif %} · {{ e.data.get('method','') }}
+              {% elif e.type == 'med' %}{{ e.data.get('name','') }}{% if e.data.get('dose') %} · {{ e.data.get('dose') }}{% endif %}
+              {% elif e.type == 'rehab' %}{{ e.data.get('project','') }} · {{ e.data.get('success',0) }}/{{ e.data.get('total',0) }}{% if e.data.get('minutes') %} · {{ e.data.get('minutes') }}分钟{% endif %}
+              {% elif e.type == 'potty' %}{{ e.data.get('kind','') }}{% if e.data.get('amount') %} · {{ e.data.get('amount') }}{% endif %}{{ ' · 带血❗' if e.data.get('blood') }}
+              {% elif e.type == 'skin' %}{{ e.data.get('finding','') }}{% if e.data.get('site') %} · {{ e.data.get('site') }}{% endif %}
+              {% elif e.type == 'bath' %}{{ e.data.get('kind','') }}
+              {% elif e.type == 'weight' %}{{ e.data.get('kg') }} kg
+              {% elif e.type == 'water' %}{{ e.data.get('ml') or '—' }} ml{% endif %}
+            </span>
+            {% if e.note %}<div class="text-muted">📝 {{ e.note }}</div>{% endif %}
+          </div>
+          <div class="text-nowrap">
+            <button class="btn btn-sm btn-link text-brand p-0 px-1" data-event='{{ ejson|tojson }}' onclick="openEdit(this)">编辑</button>
+            <button class="btn btn-sm btn-link text-danger p-0 px-1" onclick="delEvent({{ e.id }})">删除</button>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted small py-3 text-center">今天还没有记录，点上面的「打卡」开始</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include '_checkin_modal.html' %}
+{% endblock %}

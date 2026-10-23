@@ -1,0 +1,223 @@
+:root {
+  --dp-brand: #0F766E;
+  --dp-brand-d: #0B5D57;
+  --dp-ink: #22312E;
+  --dp-bg: #F4F8F7;
+  --dp-card: #FFFFFF;
+  --dp-line: #DBE7E4;
+  --dp-ok: #2E7D5B;
+  --dp-warn: #C77700;
+  --dp-danger: #C0392B;
+  --dp-mute: #6B807B;
+}
+
+body {
+  background: var(--dp-bg);
+  color: var(--dp-ink);
+  font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  padding-bottom: 40px;
+}
+
+.dp-wrap { max-width: 1240px; margin: 0 auto; }
+
+/* ---------------- 导航 ---------------- */
+.dp-nav {
+  background: var(--dp-card);
+  border-bottom: 2px solid var(--dp-line);
+  box-shadow: 0 1px 8px rgba(25, 75, 68, .06);
+}
+.dp-nav .navbar-brand { font-weight: 700; color: var(--dp-ink); letter-spacing: .5px; }
+.dp-logo { font-size: 1.3rem; }
+.dp-nav .nav-link { color: #4A635E; font-weight: 500; border-radius: 8px; padding: .4rem .8rem !important; }
+.dp-nav .nav-link:hover { background: #EDF4F3; }
+.dp-nav .nav-link.active { background: var(--dp-brand); color: #fff; }
+
+/* ---------------- 卡片 ---------------- */
+.card {
+  border: 1px solid var(--dp-line);
+  border-radius: 14px;
+  background: var(--dp-card);
+  box-shadow: 0 1px 3px rgba(25, 75, 68, .05);
+}
+.card-header {
+  background: #F8FBFA;
+  border-bottom: 1px solid var(--dp-line);
+  font-weight: 600;
+  border-radius: 14px 14px 0 0 !important;
+}
+.card-header .sub { font-weight: 400; font-size: .82rem; color: var(--dp-mute); }
+
+/* ---------------- 狗狗卡 ---------------- */
+.dog-card { transition: .15s; height: 100%; }
+.dog-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(15, 118, 110, .13); }
+.dog-avatar {
+  width: 58px; height: 58px; border-radius: 16px; flex: 0 0 58px;
+  background: linear-gradient(135deg, #FFD9B0, #E8A56B);
+  display: flex; align-items: center; justify-content: center; font-size: 30px;
+}
+.dog-name { font-size: 1.15rem; font-weight: 700; margin: 0; }
+.dog-meta { font-size: .82rem; color: var(--dp-mute); }
+.chip {
+  display: inline-block; padding: 1px 9px; border-radius: 20px;
+  font-size: .75rem; font-weight: 600; background: #E9F1EF; color: #55736D;
+  border: 1px solid #D6E5E1;
+}
+.chip.brand { background: #E0F2F0; color: var(--dp-brand-d); border-color: #B9E0DB; }
+.chip.ok { background: #E5F3EC; color: var(--dp-ok); border-color: #C6E5D6; }
+.chip.warn { background: #FFF3DE; color: var(--dp-warn); border-color: #F3DFB8; }
+.chip.danger { background: #FCE9E6; color: var(--dp-danger); border-color: #F2C9C2; }
+
+/* ---------------- 进度 ---------------- */
+.progress { height: 8px; background: #E2ECEA; border-radius: 6px; }
+.progress-bar { background: var(--dp-brand); }
+
+/* ---------------- 时间轴 ---------------- */
+.tl { position: relative; padding-left: 4px; }
+.tl-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 9px 12px; border-radius: 10px; border: 1px solid transparent;
+  border-bottom: 1px dashed var(--dp-line);
+}
+.tl-item:last-child { border-bottom: 1px dashed var(--dp-line); }
+.tl-item.done { background: #ECF6F3; border-color: #CFE8E1; }
+.tl-item:hover { background: #F7FBFA; }
+.tl-item.done:hover { background: #E3F2EE; }
+.tl-time { font-family: ui-monospace, Consolas, monospace; font-weight: 700; width: 56px; flex: 0 0 56px; color: var(--dp-brand-d); }
+.tl-body { flex: 1; min-width: 0; }
+.tl-title { font-weight: 600; }
+.tl-detail { font-size: .8rem; color: var(--dp-mute); }
+.tl-kind { font-size: .7rem; padding: 1px 7px; border-radius: 6px; }
+.k-feed { background: #E0F2F0; color: var(--dp-brand-d); }
+.k-potty { background: #E5EFF7; color: #2C6E9B; }
+.k-train { background: #EDE7F6; color: #5B44A8; }
+.k-weight { background: #F3EFE5; color: #7A6A3C; }
+
+/* ---------------- 表格 ---------------- */
+.table { font-size: .88rem; }
+.table > :not(caption) > * > * { padding: .5rem .6rem; }
+.table thead th { background: #F2F7F6; font-weight: 600; color: #5C726D; border-bottom: 2px solid var(--dp-line); white-space: nowrap; }
+
+/* ---------------- 按钮 ---------------- */
+.btn-brand { background: var(--dp-brand); border-color: var(--dp-brand); color: #fff; font-weight: 600; }
+.btn-brand:hover { background: var(--dp-brand-d); border-color: var(--dp-brand-d); color: #fff; }
+.btn-outline-brand { color: var(--dp-brand-d); border-color: #A9D8D2; background: #fff; }
+.btn-outline-brand:hover { background: #E0F2F0; color: var(--dp-brand-d); border-color: var(--dp-brand); }
+.text-brand { color: var(--dp-brand-d) !important; }
+.btn-link.text-brand { color: var(--dp-brand-d) !important; text-decoration: none; }
+.btn-link.text-brand:hover { color: var(--dp-brand) !important; text-decoration: underline; }
+.btn-link.text-danger { text-decoration: none; }
+.btn-link.text-danger:hover { text-decoration: underline; }
+
+/* ---------------- 预警 ---------------- */
+.alert-item { border-left: 4px solid; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; background: #fff; }
+.alert-item.danger { border-color: var(--dp-danger); background: #FDF4F3; }
+.alert-item.warn { border-color: var(--dp-warn); background: #FFFAF0; }
+.alert-item .t { font-weight: 700; font-size: .9rem; }
+.alert-item .d { font-size: .82rem; color: #5A716C; }
+.alert-item .a { font-size: .82rem; color: #3E5551; background: #fff; border-radius: 6px; padding: 3px 8px; margin-top: 4px; display: inline-block; }
+
+/* ---------------- 统计块 ---------------- */
+.stat { text-align: center; padding: 12px 6px; border-radius: 12px; background: #FDFAF6; border: 1px solid var(--dp-line); height: 100%; }
+.stat .v { font-size: 1.65rem; font-weight: 700; line-height: 1.2; }
+.stat .k { font-size: .78rem; color: var(--dp-mute); }
+
+/* ---------------- 狗狗日记 ---------------- */
+.diary-text { white-space: pre-wrap; line-height: 1.75; }
+.diary-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.diary-cell {
+  position: relative; border: 1px solid var(--dp-line); border-radius: 10px;
+  overflow: hidden; background: #FBF8F4;
+}
+.diary-cell img, .diary-cell video {
+  display: block; width: 100%; height: 150px; object-fit: cover; background: #000;
+}
+.diary-cell img { cursor: zoom-in; }
+.diary-cell .diary-del {
+  position: absolute; top: 4px; right: 4px; border: none; border-radius: 50%;
+  width: 22px; height: 22px; line-height: 1; font-size: .8rem; padding: 0;
+  background: rgba(0, 0, 0, .55); color: #fff; cursor: pointer;
+}
+.diary-cell .diary-del:hover { background: var(--dp-danger); }
+.diary-cap {
+  font-size: .68rem; color: var(--dp-mute); padding: 3px 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width: 576px) {
+  .diary-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .diary-cell img, .diary-cell video { height: 110px; }
+}
+
+/* ---------------- 页脚 / 作者 ---------------- */
+.dp-foot { margin-top: 28px; padding: 18px 0; border-top: 1px solid var(--dp-line); background: #F6F1EA; font-size: .85rem; }
+.dp-mute { color: var(--dp-mute); }
+.dp-author {
+  background: #fff; border: 1px solid var(--dp-line); border-radius: 14px;
+  padding: 14px 16px; box-shadow: 0 1px 3px rgba(25, 75, 68, .05);
+}
+.dp-author a { color: var(--dp-brand-d); text-decoration: none; }
+.dp-author a:hover { text-decoration: underline; }
+.dp-author-avatar {
+  width: 52px; height: 52px; border-radius: 14px; flex: 0 0 52px;
+  background: linear-gradient(135deg, #FFD9B0, #E8A56B);
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+}
+.dp-author-avatar.lg { width: 68px; height: 68px; flex: 0 0 68px; font-size: 34px; border-radius: 18px; }
+
+/* ---------------- 表单 ---------------- */
+.form-label { font-weight: 600; font-size: .86rem; margin-bottom: .2rem; }
+.form-control, .form-select { border-color: #E0D5C8; border-radius: 9px; }
+.form-control:focus, .form-select:focus { border-color: var(--dp-brand); box-shadow: 0 0 0 .18rem rgba(224, 123, 57, .15); }
+.req::after { content: " *"; color: var(--dp-danger); }
+
+/* ---------------- 提示词块 ---------------- */
+.pblock pre {
+  background: #FBF8F4; border: 1px solid var(--dp-line); border-radius: 10px;
+  padding: 14px; font-size: .8rem; line-height: 1.65; max-height: 460px; overflow: auto;
+  white-space: pre-wrap; word-break: break-word; color: #3B3025;
+}
+
+/* ---------------- 便便色块 ---------------- */
+.stool-badge { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: .85rem; }
+
+.nav-tabs .nav-link { color: #5C726D; font-weight: 500; border: none; border-bottom: 3px solid transparent; }
+.nav-tabs .nav-link.active { color: var(--dp-brand-d); border-bottom-color: var(--dp-brand); background: transparent; }
+
+@media (max-width: 576px) {
+  .tl-time { width: 46px; flex: 0 0 46px; font-size: .85rem; }
+  .dog-name { font-size: 1.05rem; }
+}
+
+/* ---------------- PWA 安装条 ---------------- */
+.dp-installbar {
+  position: fixed; left: 12px; right: 12px; bottom: 12px;
+  background: #fff; border: 1px solid var(--dp-line);
+  border-radius: 14px; box-shadow: 0 8px 30px rgba(120, 70, 20, .22);
+  padding: 12px 14px; z-index: 1500;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-size: .9rem;
+}
+.dp-installbar .small { color: var(--dp-mute); }
+
+/* iOS 手动安装提示用 */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .dp-installbar { display: none !important; }
+}
+
+/* ---------------- 照护平台扩展 ---------------- */
+.vital-bad { background: #FCE9E6 !important; color: var(--dp-danger) !important; font-weight: 700; }
+.vital-warn { background: #FFF3DE !important; color: var(--dp-warn) !important; font-weight: 600; }
+.med-chip { display:inline-block; padding:2px 8px; border-radius:8px; background:#E9F1EF; color:#55736D; font-size:.78rem; margin:2px 4px 2px 0; border:1px solid #D6E5E1;}
+.med-chip.off { opacity:.45; text-decoration: line-through; }
+.k-turn { background: #E3F2EE; color: var(--dp-brand-d); }
+.k-med { background: #EDE7F6; color: #5B44A8; }
+.k-skin { background: #FCE9E6; color: var(--dp-danger); }
+.k-bath { background: #E5EFF7; color: #2C6E9B; }
+.k-handover { background: #FFF3DE; color: var(--dp-warn); }
+.k-meal { background: #FDEDE0; color: var(--dp-brand-d); }
+.k-water { background: #E5EFF7; color: #2C6E9B; }
+.k-rehab { background: #EDE7F6; color: #5B44A8; }
+.k-note { background: #F3EFE5; color: #7A6A3C; }

@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}关于 · 照护管理平台{% endblock %}
+{% block content %}
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      <div class="dog-avatar" style="width:72px;height:72px;font-size:38px">🩺</div>
+      <div class="me-auto">
+        <h4 class="fw-bold mb-1">{{ APP_NAME }} <span class="chip">{{ APP_VERSION }}</span></h4>
+        <div class="small text-muted">
+          护工记、家属看：把翻身、喂药、体征、康复、日记和花销落到一处，谁也不用靠记性。
+        </div>
+        <div class="small text-muted mt-1">自 {{ since }} · 架构源自「狗狗管理平台」同一套本地化方案</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">👤 作者</div>
+      <div class="card-body py-2">
+        <div class="mb-1"><b>{{ AUTHOR.name }}</b> · {{ AUTHOR.org }}</div>
+        <div class="small mb-1">📍 {{ AUTHOR.city }} · 💡 {{ AUTHOR.slogan }}</div>
+        <div class="small">
+          📱 <a href="tel:{{ AUTHOR.phone }}">{{ AUTHOR.phone }}</a> ·
+          ✉️ <a href="mailto:{{ AUTHOR.email }}">{{ AUTHOR.email }}</a>
+        </div>
+        <div class="small">
+          <svg height="13" width="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.380-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.011.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.950-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.092 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.873.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.010 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          <a href="{{ AUTHOR.github_url }}" target="_blank" rel="noopener">github.com/{{ AUTHOR.github }}</a>
+        </div>
+        <div class="small text-muted mt-2">{{ AUTHOR.intro }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">📊 平台数据量</div>
+      <div class="card-body py-2">
+        <div class="row g-2 text-center">
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.patients }}</div><div class="k">病人档案</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.events }}</div><div class="k">照护事件</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.meds }}</div><div class="k">在服药品</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.vitals }}</div><div class="k">体征记录</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.diary }}</div><div class="k">日记</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.media }}</div><div class="k">照片视频</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.expense }}</div><div class="k">消费笔数</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">¥{{ '%.0f'|format(stat.spent) }}</div><div class="k">累计支出</div></div></div>
+          <div class="col-4"><div class="stat"><div class="v">{{ stat.knowledge }}</div><div class="k">知识条目</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">✨ 功能模块</div>
+      <div class="card-body py-2">
+        <div class="row g-2 small">
+          <div class="col-md-4">📋 <b>今日照护</b> —— 按照护等级自动排任务：翻身每 2h、三餐、饮水、皮肤检查，一键打卡</div>
+          <div class="col-md-4">💊 <b>用药管理</b> —— 药品时间表 + 服药打卡，漏服自动预警</div>
+          <div class="col-md-4">📈 <b>体征记录</b> —— 血压/心率/体温/血氧/血糖，趋势图 + 异常标红</div>
+          <div class="col-md-4">💪 <b>康复训练</b> —— 项目、完成率统计，训练安全提示</div>
+          <div class="col-md-4">📒 <b>照护记录</b> —— 全部打卡记录，可按类型/日期/记录人筛选</div>
+          <div class="col-md-4">📖 <b>照护日记</b> —— 图文/视频记录恢复过程</div>
+          <div class="col-md-4">💰 <b>记账</b> —— 护工工资、药品耗材、复诊交通，饼图+月度趋势+CSV 导出</div>
+          <div class="col-md-4">🏥 <b>医疗档案</b> —— 就诊/检查/手术/复诊提醒</div>
+          <div class="col-md-4">📊 <b>周报</b> —— 完成率、服药、翻身、饮水的统计与建议</div>
+          <div class="col-md-4">📚 <b>照护知识</b> —— 压疮/用药/康复/饮食/体征内置科普</div>
+          <div class="col-md-4">🗂 <b>多病人</b> —— 每位病人独立档案与数据，适合照护多位家人</div>
+          <div class="col-md-4">📱 <b>PWA</b> —— 手机加到桌面，像 App 一样打卡</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">🔒 数据与隐私</div>
+      <div class="card-body py-2 small">
+        <div class="mb-1">💾 全部数据存在本机（数据库 + 照片视频都在 <code>data/</code> 目录），不连任何云。</div>
+        <div class="mb-1">⚠️ <b>平台没有登录功能</b>，靠家庭局域网隔离 —— 只在家里 WiFi 环境用，<b>不要做端口映射到公网</b>。</div>
+        <div class="mb-1">💾 备份 = 复制 <code>data/careplat.db</code> + <code>data/uploads/</code> 整个目录，两样都拷才算备份完整。</div>
+        <div class="mb-0">⚕️ 本平台记录与提示仅供照护参考，不构成医疗建议；紧急情况立即就医或拨打 120。</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

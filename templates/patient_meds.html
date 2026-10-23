@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 用药管理{% endblock %}
+
+{% block content %}
+{% set active = 'meds' %}
+{% include '_header.html' %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>💊 药品时间表 <span class="sub">每天按这个时间点提醒</span></span>
+        <button class="btn btn-sm btn-brand" onclick="openMedNew()">＋ 添加药品</button>
+      </div>
+      <div class="card-body py-2">
+        {% for m in sched %}
+        <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px dashed var(--dp-line)">
+          <div>
+            <div class="med-chip {{ 'off' if not m.active }}">
+              <b>{{ m.med_name }}</b>
+              {% if m.dose %}{{ m.dose }}{% endif %}{% if m.form %}{{ m.form }}{% endif %}
+              · ⏰ {{ m.times }}
+              {% if m.usage_txt %} · {{ m.usage_txt }}{% endif %}
+              {% if m.purpose %} · {{ m.purpose }}{% endif %}
+            </div>
+            {% if m.note %}<div class="small text-muted">📝 {{ m.note }}</div>{% endif %}
+            {% if not m.active %}<div class="small text-muted">已停用（不参与提醒）</div>{% endif %}
+          </div>
+          <div class="text-nowrap">
+            <button class="btn btn-sm btn-link text-brand p-0 px-1"
+                    data-med='{{ m|tojson }}' onclick="openMedEdit(this)">编辑</button>
+            <button class="btn btn-sm btn-link text-brand p-0 px-1" onclick="toggleMed({{ m.id }})">
+              {{ '停用' if m.active else '启用' }}</button>
+            <button class="btn btn-sm btn-link text-danger p-0 px-1" onclick="delMed({{ m.id }})">删除</button>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted small py-3 text-center">
+          还没加药品。加上后每天会自动出现在「今日照护」时间轴里。
+        </div>
+        {% endfor %}
+        <div class="small text-muted mt-2">⚠️ 剂量和时间以医嘱为准。缓释片、肠溶片不可掰开或研碎。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">🕐 近期服药记录 <span class="sub">{{ logs|length }} 条</span></div>
+      <div class="card-body py-2" style="max-height:360px;overflow:auto">
+        {% for e in logs %}
+        {% set ejson = {'id': e.id, 'type': 'med', 'day': e.day, 'time': e.time, 'note': e.note or '', 'by': e.by or '', 'data': e.data} %}
+        <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px dashed var(--dp-line)">
+          <div class="small">
+            <b>{{ e.day }} {{ e.time }}</b>
+            <span class="ms-2">{{ e.data.get('name','') }}{% if e.data.get('dose') %} · {{ e.data.get('dose') }}{% endif %}</span>
+            {% if e.by %}<span class="text-muted ms-1">· {{ e.by }}</span>{% endif %}
+            {% if e.note %}<div class="text-muted">📝 {{ e.note }}</div>{% endif %}
+          </div>
+          <div class="text-nowrap">
+            <button class="btn btn-sm btn-link text-brand p-0 px-1" data-event='{{ ejson|tojson }}' onclick="openEdit(this)">编辑</button>
+            <button class="btn btn-sm btn-link text-danger p-0 px-1" onclick="delEvent({{ e.id }})">删除</button>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted small py-3 text-center">还没有服药打卡</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">✅ 今天 {{ day }} <span class="sub">{{ hit }}/{{ total }}</span></div>
+      <div class="card-body py-2">
+        {% for it in today_meds %}
+        <div class="tl-item {{ 'done' if it.done }}">
+          <div class="tl-time">{{ it.time }}</div>
+          <div class="tl-body">
+            <span class="tl-title">{{ it.title }}</span>
+            {% if it.done %}<span class="chip ok">✅</span>{% endif %}
+          </div>
+          {% if not it.done %}
+          <button class="btn btn-sm btn-brand" data-kind="med" data-time="{{ it.time }}"
+                  data-day="{{ day }}" data-key="{{ it.key }}"
+                  data-def="{{ it.def_name }}|{{ it.def_dose }}"
+                  onclick="openCheckin(this)">打卡</button>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="text-muted small py-3 text-center">今天没有排药的服药点</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">📚 用药安全提醒</div>
+      <div class="card-body py-2 small">
+        <div class="mb-2">💊 <b>漏服处理：</b>不要自行加倍补服，先咨询医生或药师。</div>
+        <div class="mb-2">🧊 <b>药品保管：</b>避光干燥；需冷藏的（如胰岛素）放冷藏室不冷冻。</div>
+        <div class="mb-2">🥣 <b>鼻饲给药：</b>研碎溶解、给药前后温水冲管；缓释片肠溶片不可研碎。</div>
+        <div class="mb-0">🏷 <b>多人照护：</b>打卡时填上「记录人」，出了疑问能对上谁喂的药。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include '_checkin_modal.html' %}
+
+<!-- 添加 / 编辑药品弹窗 -->
+<div class="modal fade" id="medModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="mdTitle">＋ 添加药品</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mdPatient" value="{{ patient.id }}">
+        <input type="hidden" id="mdId">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label">药名 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="mdName" placeholder="如 氨氯地平">
+          </div>
+          <div class="col-3">
+            <label class="form-label">剂量</label>
+            <input type="text" class="form-control form-control-sm" id="mdDose" placeholder="5mg / 1片">
+          </div>
+          <div class="col-3">
+            <label class="form-label">剂型</label>
+            <select class="form-select form-select-sm" id="mdForm">
+              <option>片</option><option>粒</option><option>支</option><option>贴</option>
+              <option>袋</option><option>喷</option><option>滴</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">服药时间点 <span class="text-danger">*</span>（多个用逗号隔开）</label>
+            <input type="text" class="form-control form-control-sm" id="mdTimes" placeholder="08:00,12:00,20:00">
+            <div class="small text-muted mt-1">这些时间点会自动出现在每天的任务时间轴里</div>
+          </div>
+          <div class="col-6">
+            <label class="form-label">用法</label>
+            <input type="text" class="form-control form-control-sm" id="mdUsage" placeholder="饭后 / 空腹 / 睡前">
+          </div>
+          <div class="col-6">
+            <label class="form-label">用途</label>
+            <input type="text" class="form-control form-control-sm" id="mdPurpose" placeholder="降压 / 降糖">
+          </div>
+          <div class="col-12">
+            <label class="form-label">备注</label>
+            <input type="text" class="form-control form-control-sm" id="mdNote" placeholder="选填">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-brand btn-sm" onclick="submitMed()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

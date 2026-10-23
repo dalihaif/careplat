@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}照护知识 · 照护管理平台{% endblock %}
+{% block content %}
+<h5 class="fw-bold mb-3">📚 照护知识库 <span class="sub">通用科普，具体执行以医嘱为准</span></h5>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-3 col-6">
+    <input type="text" class="form-control form-control-sm" name="q" value="{{ q }}" placeholder="搜主题 / 内容">
+  </div>
+  <div class="col-md-3 col-6">
+    <select class="form-select form-select-sm" name="cat">
+      <option value="">全部分类</option>
+      {% for c in cats %}<option value="{{ c }}" {{ 'selected' if cat == c }}>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2 col-4"><button class="btn btn-sm btn-outline-brand w-100">筛选</button></div>
+</form>
+
+<div class="row g-3">
+  {% for r in rows %}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body py-2">
+        <div class="mb-1">
+          <span class="chip brand">{{ r.category }}</span>
+          <b>{{ r.topic }}</b>
+        </div>
+        <div class="small">{{ r.conclusion }}</div>
+        {% if r.source %}<div class="small text-muted mt-1">来源：{{ r.source }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="card"><div class="card-body text-center text-muted py-4">没有匹配的知识条目</div></div></div>
+  {% endfor %}
+</div>
+
+<div class="alert alert-info small mt-3 mb-0">
+  ⚠️ 这里的内容是通用科普，用来「知道该注意什么」；真正执行时——
+  用什么药、练什么动作、吃多少饭，都以主治医生和康复师的医嘱为准。
+</div>
+{% endblock %}

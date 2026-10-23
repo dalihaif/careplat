@@ -1,0 +1,201 @@
+{# ==================== 打卡 / 编辑弹窗（共用） ====================
+   用法：新打卡 → onclick="openCheckin(this)"   编辑 → onclick="openEdit(this)" data-event='...'
+#}
+<div class="modal fade" id="ckModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="ckTitle">记录</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ckPatient" value="{{ patient.id }}">
+        <input type="hidden" id="ckEditId">
+        <input type="hidden" id="ckType">
+        <input type="hidden" id="ckTime">
+        <input type="hidden" id="ckDay">
+        <input type="hidden" id="ckKey">
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-4">
+            <label class="form-label">日期</label>
+            <input type="date" class="form-control form-control-sm" id="ckDayInput" value="{{ today }}">
+          </div>
+          <div class="col-4">
+            <label class="form-label">时间</label>
+            <input type="time" class="form-control form-control-sm" id="ckTimeInput">
+          </div>
+          <div class="col-4">
+            <label class="form-label">记录人</label>
+            <input type="text" class="form-control form-control-sm" id="ckBy" placeholder="护工/家属署名">
+          </div>
+        </div>
+
+        <!-- 翻身 -->
+        <div data-sec="turn" class="d-none">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">翻成了</label>
+              <select class="form-select form-select-sm" id="turn_side">
+                <option>左侧卧</option><option>右侧卧</option><option>仰卧</option>
+                <option>俯卧</option><option>半坐卧</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">翻身时看皮肤</label>
+              <input type="text" class="form-control form-control-sm" id="turn_skin" placeholder="选填：骶尾微红">
+            </div>
+          </div>
+        </div>
+
+        <!-- 进食 -->
+        <div data-sec="meal" class="d-none">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">吃了什么</label>
+              <input type="text" class="form-control form-control-sm" id="meal_food" placeholder="软米饭+蒸蛋">
+            </div>
+            <div class="col-6">
+              <label class="form-label">吃了多少</label>
+              <select class="form-select form-select-sm" id="meal_eaten">
+                <option value="">—</option>
+                <option>全部吃完</option><option>大半</option><option>一半</option>
+                <option>少量</option><option>未进</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">进食方式</label>
+              <select class="form-select form-select-sm" id="meal_method">
+                <option>经口正常</option><option>经口协助</option><option>糊状/软食</option>
+                <option>流食</option><option>鼻饲</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 饮水 -->
+        <div data-sec="water" class="d-none">
+          <label class="form-label">饮水量（ml，估算）</label>
+          <input type="number" class="form-control" id="water_ml" placeholder="250">
+        </div>
+
+        <!-- 服药 -->
+        <div data-sec="med" class="d-none">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">药名</label>
+              <input type="text" class="form-control form-control-sm" id="med_name" placeholder="如 氨氯地平">
+            </div>
+            <div class="col-6">
+              <label class="form-label">剂量</label>
+              <input type="text" class="form-control form-control-sm" id="med_dose" placeholder="如 5mg 1片">
+            </div>
+          </div>
+          <div class="small text-muted mt-2">⚠️ 药按医嘱吃。漏了的这顿怎么补，问医生，不要自行加倍。</div>
+        </div>
+
+        <!-- 康复训练 -->
+        <div data-sec="rehab" class="d-none">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">训练项目</label>
+              <select class="form-select form-select-sm" id="rehab_project">
+                <option>关节活动（被动）</option><option>踝泵运动</option><option>抬腿练习</option>
+                <option>坐位平衡</option><option>站立训练</option><option>行走训练</option>
+                <option>握力/上肢</option><option>呼吸训练</option><option>拍背排痰</option>
+                <option value="其他">其他</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label class="form-label">时长(分钟)</label>
+              <input type="number" class="form-control form-control-sm" id="rehab_minutes" value="15">
+            </div>
+            <div class="col-4">
+              <label class="form-label">完成次数/组</label>
+              <input type="number" class="form-control form-control-sm" id="rehab_success" value="8">
+            </div>
+            <div class="col-4">
+              <label class="form-label">计划次数/组</label>
+              <input type="number" class="form-control form-control-sm" id="rehab_total" value="10">
+            </div>
+          </div>
+          <div class="small text-muted mt-2">训练中如出现头晕、胸闷、疼痛，立即停止并咨询医生。</div>
+        </div>
+
+        <!-- 排泄 -->
+        <div data-sec="potty" class="d-none">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">类型</label>
+              <select class="form-select form-select-sm" id="potty_kind">
+                <option value="尿">尿</option><option value="便">便</option>
+                <option value="尿+便">尿+便</option><option value="导尿">导尿</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">量/性状</label>
+              <input type="text" class="form-control form-control-sm" id="potty_amount" placeholder="正常 / 少且深黄 / 干结">
+            </div>
+            <div class="col-12">
+              <label class="form-label">其他观察</label>
+              <input type="text" class="form-control form-control-sm" id="potty_extra" placeholder="选填">
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="potty_blood">
+                <label class="form-check-label text-danger" for="potty_blood">血尿 / 黑便 / 便中带血 ❗</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 皮肤检查 -->
+        <div data-sec="skin" class="d-none">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">检查结果</label>
+              <select class="form-select form-select-sm" id="skin_finding">
+                <option>无异常</option><option>压红（可退）</option><option>压红（不退）</option>
+                <option>破皮/水疱</option><option>已有压疮（观察）</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">部位</label>
+              <input type="text" class="form-control form-control-sm" id="skin_site" placeholder="骶尾 / 足跟">
+            </div>
+          </div>
+        </div>
+
+        <!-- 洗澡擦浴 -->
+        <div data-sec="bath" class="d-none">
+          <label class="form-label">方式</label>
+          <select class="form-select form-select-sm" id="bath_kind">
+            <option>擦浴</option><option>洗澡</option><option>洗头</option><option>泡脚</option>
+          </select>
+        </div>
+
+        <!-- 交接班 -->
+        <div data-sec="handover" class="d-none">
+          <div class="small text-muted mb-2">交接班要点写进备注：今天的状态、有没有异常、明天要注意什么。</div>
+        </div>
+
+        <!-- 体重 -->
+        <div data-sec="weight" class="d-none">
+          <label class="form-label">体重（kg）</label>
+          <input type="number" step="0.1" class="form-control" id="weight_kg" placeholder="62.5">
+        </div>
+
+        <!-- 备注（所有类型通用） -->
+        <div class="mt-3">
+          <label class="form-label">备注</label>
+          <input type="text" class="form-control form-control-sm" id="ckNote" placeholder="选填">
+        </div>
+
+        <div id="ckEditHint" class="d-none small text-muted mt-2">✏️ 正在修改已有记录，保存后原记录被覆盖。</div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-brand btn-sm" id="ckSaveBtn" onclick="submitCheckin()">保存记录</button>
+      </div>
+    </div>
+  </div>
+</div>

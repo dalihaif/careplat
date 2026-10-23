@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}通知设置 · 照护管理平台{% endblock %}
+{% block content %}
+<h5 class="fw-bold mb-1">📬 通知设置</h5>
+<div class="small text-muted mb-3">
+  配好后，漏打卡 / 翻身超时 / 体征异常 / 复诊提醒会自动发邮件给家属——
+  同一类提醒每天最多一封，不会轰炸。平台每 10 分钟自动检查一轮。
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">✉️ 收件与 SMTP</div>
+      <div class="card-body">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="notify_enabled"
+                 {{ 'checked' if cfg.notify_enabled == '1' }}>
+          <label class="form-check-label fw-semibold" for="notify_enabled">启用邮件通知</label>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">收件邮箱 <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="notify_email"
+                 value="{{ cfg.notify_email }}" placeholder="家属邮箱，多个用逗号隔开">
+          <div class="small text-muted mt-1">QQ 邮箱、163、Gmail 都行，手机装了邮箱 App 就能收到</div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-7">
+            <label class="form-label">SMTP 服务器 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="smtp_host"
+                   value="{{ cfg.smtp_host }}" placeholder="smtp.qq.com">
+          </div>
+          <div class="col-5">
+            <label class="form-label">端口</label>
+            <input type="number" class="form-control form-control-sm" id="smtp_port"
+                   value="{{ cfg.smtp_port or '465' }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">加密方式</label>
+            <select class="form-select form-select-sm" id="smtp_ssl">
+              <option value="ssl" {{ 'selected' if cfg.smtp_ssl == 'ssl' or not cfg.smtp_ssl }}>SSL（端口 465，QQ/163 推荐）</option>
+              <option value="starttls" {{ 'selected' if cfg.smtp_ssl == 'starttls' }}>STARTTLS（端口 587）</option>
+              <option value="none" {{ 'selected' if cfg.smtp_ssl == 'none' }}>不加密（本机邮件服务器）</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">发件邮箱（SMTP 账号）</label>
+            <input type="text" class="form-control form-control-sm" id="smtp_user"
+                   value="{{ cfg.smtp_user }}" placeholder="一般和收件邮箱不同，是你的发件邮箱">
+          </div>
+          <div class="col-6">
+            <label class="form-label">SMTP 授权码 / 密码</label>
+            <input type="password" class="form-control form-control-sm" id="smtp_pass"
+                   value="{{ '********' if cfg.smtp_pass else '' }}" placeholder="QQ 邮箱用授权码，不是登录密码">
+            <div class="small text-muted mt-1">QQ 邮箱：设置 → 账户 → 开启 SMTP → 生成授权码</div>
+          </div>
+        </div>
+
+        <div class="fw-semibold mt-3 mb-2">发哪些提醒</div>
+        {% for key, label in cats %}
+        <div class="form-check form-switch">
+          <input class="form-check-input notify-cat" type="checkbox" id="{{ key }}"
+                 {{ 'checked' if cfg[key] == '1' }}>
+          <label class="form-check-label" for="{{ key }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-brand btn-sm" onclick="saveSettings()">保存设置</button>
+          <button class="btn btn-outline-brand btn-sm" onclick="testMail()">📧 发测试邮件</button>
+        </div>
+        <div id="settingsMsg" class="small mt-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">📜 最近发送记录 <span class="sub">同类提醒一天只发一次</span></div>
+      <div class="card-body py-2" style="max-height:420px;overflow:auto">
+        {% for l in logs %}
+        <div class="py-2 small" style="border-bottom:1px dashed var(--dp-line)">
+          <b>{{ l.name or '病人' }}</b> · {{ l.title }}
+          <div class="text-muted">
+            {{ l.sent_at }} ·
+            {% if l.ok == 1 %}<span class="chip ok">✅ 已送达</span>
+            {% elif l.ok == 0 %}<span class="chip danger">❌ 失败：{{ l.error }}</span>
+            {% else %}<span class="chip">待发</span>{% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted small py-3 text-center">还没有发送记录</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">💡 常见邮箱配置</div>
+      <div class="card-body py-2 small">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>邮箱</th><th>SMTP 服务器</th><th>端口</th></tr></thead>
+          <tbody>
+            <tr><td>QQ 邮箱</td><td>smtp.qq.com</td><td>465 (SSL)</td></tr>
+            <tr><td>163 邮箱</td><td>smtp.163.com</td><td>465 (SSL)</td></tr>
+            <tr><td>Gmail</td><td>smtp.gmail.com</td><td>465 (SSL)</td></tr>
+            <tr><td>Outlook</td><td>smtp.office365.com</td><td>587 (STARTTLS)</td></tr>
+          </tbody>
+        </table>
+        <div class="text-muted mt-2">国内邮箱都需要先在网页版邮箱设置里开启 SMTP 服务并生成授权码。</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function collectSettings() {
+  var body = {};
+  body.notify_enabled = document.getElementById('notify_enabled').checked ? '1' : '0';
+  ['notify_email', 'smtp_host', 'smtp_port', 'smtp_ssl', 'smtp_user'].forEach(function (id) {
+    body[id] = document.getElementById(id).value.trim();
+  });
+  var pass = document.getElementById('smtp_pass').value;
+  if (pass && pass !== '********') body.smtp_pass = pass;
+  document.querySelectorAll('.notify-cat').forEach(function (c) {
+    body[c.id] = c.checked ? '1' : '0';
+  });
+  return body;
+}
+function saveSettings() {
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(collectSettings())
+  }).then(function (r) { return r.json(); }).then(function (res) {
+    var m = document.getElementById('settingsMsg');
+    if (res.ok) { m.innerHTML = '<span class="text-success">✅ 已保存</span>'; }
+    else m.innerHTML = '<span class="text-danger">❌ ' + (res.error || '失败') + '</span>';
+  }).catch(function () { alert('网络错误'); });
+}
+function testMail() {
+  var m = document.getElementById('settingsMsg');
+  m.innerHTML = '<span class="text-muted">发送中……</span>';
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(collectSettings())
+  }).then(function (r) { return r.json(); }).then(function () {
+    return fetch('/api/settings/test', { method: 'POST' });
+  }).then(function (r) { return r.json(); }).then(function (res) {
+    if (res.ok) m.innerHTML = '<span class="text-success">✅ 测试邮件已发出，去收件箱看看（留意垃圾邮件）</span>';
+    else m.innerHTML = '<span class="text-danger">❌ ' + (res.error || '发送失败') + '</span>';
+  }).catch(function (e) { m.innerHTML = '<span class="text-danger">❌ 网络错误</span>'; });
+}
+</script>
+{% endblock %}

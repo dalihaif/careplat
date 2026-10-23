@@ -1,0 +1,31 @@
+{# ==================== 改状态弹窗（base.html 引入，全局共用） ==================== #}
+<div class="modal fade" id="stModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">改照护状态</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="stPatientId">
+        <div class="mb-2">
+          当前：<b id="stPatientName"></b> ——「<span id="stCurrent"></span>」
+        </div>
+        <label class="form-label">改为</label>
+        <select class="form-select form-select-sm mb-2" id="stNew">
+          {% for s in PATIENT_STATUS %}
+          <option value="{{ s }}">{{ s }}{% if STATUS_TIP.get(s) %} —— {{ STATUS_TIP[s] }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <label class="form-label">备注（改了什么、为什么）</label>
+        <textarea class="form-control form-control-sm" id="stNote" rows="2"
+                  placeholder="选填，如「术后 42 天复查合格，转居家康复」"></textarea>
+        <div class="small text-muted mt-2">状态会留痕：谁在什么时候把状态从什么改成了什么，档案详情页可查。</div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-brand btn-sm" onclick="submitStatus()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}总览 · 照护管理平台{% endblock %}
+{% block content %}
+
+{% if cards %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0">🏡 今天要照顾谁</h5>
+    <div class="small text-muted">{{ today }} · 点卡片进工作台</div>
+  </div>
+  <a href="{{ url_for('patient_new') }}" class="btn btn-brand btn-sm">＋ 新增病人</a>
+</div>
+
+{% if alerts %}
+<div class="mb-3">
+  {% for a in alerts[:6] %}
+  <div class="alert-item {{ a.level }}">
+    <div class="t">
+      {% if a.level == 'danger' %}❌{% else %}⚠️{% endif %}
+      <a href="{{ url_for('patient_today', pid=a.patient_id) }}" class="text-decoration-none">{{ a.patient }}</a>
+      —— {{ a.title }}
+    </div>
+    <div class="d">{{ a.detail }}</div>
+    <div class="a">👉 {{ a.action }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for c in cards %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card dog-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="dog-avatar">{{ '👨‍🦳' if c.patient.sex == '男' else ('👩‍🦳' if c.patient.sex == '女' else '🧑') }}</div>
+          <div class="me-auto">
+            <h6 class="dog-name">{{ c.patient.name }}
+              {% if c.patient.care_level %}<span class="chip brand">{{ c.patient.care_level }}</span>{% endif %}
+            </h6>
+            <div class="dog-meta">
+              {{ c.patient.diagnosis or '未填诊断' }}{% if c.age %} · {{ c.age }}{% endif %}
+            </div>
+          </div>
+          <a href="{{ url_for('patient_today', pid=c.patient.id) }}" class="btn btn-brand btn-sm">进工作台</a>
+        </div>
+
+        <div class="d-flex justify-content-between small mb-1">
+          <span>今日任务 <b>{{ c.hit }}/{{ c.total }}</b></span>
+          <span>{{ c.pct }}%</span>
+        </div>
+        <div class="progress mb-2" style="height:7px">
+          <div class="progress-bar" style="width:{{ c.pct }}%"></div>
+        </div>
+
+        {% if c.danger or c.warn %}
+        <div class="small">
+          {% if c.danger %}<span class="chip danger">❌ {{ c.danger }} 项要处理</span>{% endif %}
+          {% if c.warn %}<span class="chip warn">⚠️ {{ c.warn }} 项提醒</span>{% endif %}
+        </div>
+        {% else %}
+        <div class="small text-muted">✅ 暂无异常，节奏正常</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <div style="font-size:52px">🩺</div>
+    <h5 class="fw-bold mt-2">先建一份病人档案</h5>
+    <p class="text-muted mb-3">填好诊断、照护等级和紧急联系人，平台会自动按等级排照护任务。</p>
+    <a href="{{ url_for('patient_new') }}" class="btn btn-brand">＋ 新增病人</a>
+  </div>
+</div>
+{% endif %}
+
+{% if others %}
+<hr class="my-4">
+<h6 class="text-muted mb-2">已结束照护（档案保留，可随时查看）</h6>
+<div class="d-flex flex-wrap gap-2">
+  {% for p in others %}
+  <a class="chip text-decoration-none" href="{{ url_for('patient_profile', pid=p.id) }}">
+    {{ p.name }} · {{ p.status }}{% if p.status_changed_at %}（{{ p.status_changed_at }}）{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

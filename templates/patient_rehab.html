@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 康复训练{% endblock %}
+
+{% block content %}
+{% set active = 'rehab' %}
+{% include '_header.html' %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>💪 训练记录 <span class="sub">近 14 天 {{ stats.rehabs }} 次</span></span>
+        <button class="btn btn-sm btn-brand" data-kind="rehab" onclick="openCheckin(this)">＋ 记一次训练</button>
+      </div>
+      <div class="card-body py-2" style="max-height:430px;overflow:auto">
+        {% for e in logs %}
+        {% set ejson = {'id': e.id, 'type': 'rehab', 'day': e.day, 'time': e.time, 'note': e.note or '', 'by': e.by or '', 'data': e.data} %}
+        <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px dashed var(--dp-line)">
+          <div class="small">
+            <span class="tl-kind k-rehab">{{ e.data.get('project') or '训练' }}</span>
+            <b class="ms-1">{{ e.day }} {{ e.time }}</b>
+            <span class="text-muted ms-2">完成 {{ e.data.get('success', 0) }}/{{ e.data.get('total', 0) }}{% if e.data.get('minutes') %} · {{ e.data.get('minutes') }} 分钟{% endif %}</span>
+            {% if e.by %}<span class="text-muted ms-1">· {{ e.by }}</span>{% endif %}
+            {% if e.note %}<div class="text-muted">📝 {{ e.note }}</div>{% endif %}
+          </div>
+          <div class="text-nowrap">
+            <button class="btn btn-sm btn-link text-brand p-0 px-1" data-event='{{ ejson|tojson }}' onclick="openEdit(this)">编辑</button>
+            <button class="btn btn-sm btn-link text-danger p-0 px-1" onclick="delEvent({{ e.id }})">删除</button>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted small py-3 text-center">还没有训练记录。从每天 10-15 分钟开始，动比不动强。</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">📊 各项目完成率</div>
+      <div class="card-body py-2">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>项目</th><th>次数</th><th>完成率</th></tr></thead>
+          <tbody>
+            {% for p in proj_rows %}
+            <tr>
+              <td>{{ p.name }}</td>
+              <td>{{ p.sessions }}</td>
+              <td>
+                <div class="progress" style="height:6px;width:90px;display:inline-block;vertical-align:middle">
+                  <div class="progress-bar" style="width:{{ p.rate }}%"></div>
+                </div>
+                <span class="small ms-1">{{ p.rate }}%（{{ p.success }}/{{ p.total }}）</span>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-center text-muted py-3">还没有数据</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">📚 训练安全</div>
+      <div class="card-body py-2 small">
+        <div class="mb-2">🐢 <b>循序渐进：</b>以「第二天不加重疲劳酸痛」为度，别一次练猛。</div>
+        <div class="mb-2">🛑 <b>立即停止：</b>训练中出现头晕、胸闷、疼痛、面色发白。</div>
+        <div class="mb-2">🦶 <b>卧床防血栓：</b>踝泵运动每小时一组、每组 20 次。</div>
+        <div class="mb-0">🧍 <b>起立三步走：</b>躺 30 秒 → 坐 30 秒 → 站 30 秒，防体位性低血压跌倒。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include '_checkin_modal.html' %}
+{% endblock %}
