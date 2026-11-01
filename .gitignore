@@ -13,6 +13,10 @@ build/
 dist/
 *.spec.bak
 
+# ============ 隧道客户端（53MB 二进制，用时自动下载） ============
+tools/cloudflared.exe
+tools/*.part
+
 # ============ Python ============
 __pycache__/
 *.py[cod]

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """照护管理平台 · Flask 应用（架构借鉴狗狗管理平台）"""
 import csv
+import hashlib
 import io
 import json
 import mimetypes
 import os
+import secrets
 import socket
 import sys
 import time
@@ -13,14 +15,37 @@ from datetime import date, datetime, timedelta
 from urllib.parse import quote
 
 from flask import (Flask, Response, flash, g, jsonify, redirect,
-                   render_template, request, send_from_directory, url_for)
+                   render_template, request, send_from_directory, session, url_for)
 
 import care
 import db as DB
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'careplat-local-key'
+
+
+def _load_secret_key():
+    """会话密钥持久化到 data/.secret_key，避免每次重启把所有人踢下线"""
+    path = os.path.join(DB.DATA_DIR, '.secret_key')
+    try:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                k = f.read().strip()
+            if len(k) >= 32:
+                return k
+        k = secrets.token_hex(32)
+        os.makedirs(DB.DATA_DIR, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(k)
+        return k
+    except OSError:
+        return secrets.token_hex(32)
+
+
+app.config['SECRET_KEY'] = _load_secret_key()
 app.config['JSON_AS_ASCII'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 # 上传上限：单个请求 300MB（够放一段手机短视频）
 app.config['MAX_CONTENT_LENGTH'] = 300 * 1024 * 1024
 app.teardown_appcontext(DB.close_db)
@@ -272,6 +297,7 @@ def ensure_init():
     DB.init_db(conn)
     seed_knowledge(conn)
     conn.close()
+    _ensure_password()      # 首次启动生成访问密码（公网暴露时的唯一门锁）
 
 
 def seed_knowledge(conn):
@@ -320,6 +346,138 @@ def inject_globals():
         'human_size': human_size,
         'pstatus': lambda p: (p.get('status') if hasattr(p, 'get') else p['status']) or care.STATUS_MANAGED,
     }
+
+
+# ---------------------------------------------------------------- 访问密码（公网暴露时的唯一门锁）
+PWD_ITER = 120000
+LOGIN_FAIL = {}          # ip -> [失败次数, 首次失败时间]
+LOGIN_MAX_FAIL = 5
+LOGIN_LOCK_SEC = 600
+
+
+def _hash_pwd(pwd, salt):
+    return hashlib.pbkdf2_hmac('sha256', pwd.encode('utf-8'),
+                               salt.encode('utf-8'), PWD_ITER).hex()
+
+
+def _set_password(conn, pwd):
+    salt = secrets.token_hex(16)
+    set_setting(conn, 'access_pwd_salt', salt)
+    set_setting(conn, 'access_pwd_hash', _hash_pwd(pwd, salt))
+    conn.commit()
+
+
+def _check_password(conn, pwd):
+    salt = get_setting(conn, 'access_pwd_salt')
+    want = get_setting(conn, 'access_pwd_hash')
+    if not salt or not want:
+        return True                      # 没设密码 = 不设门（局域网模式）
+    return secrets.compare_digest(_hash_pwd(pwd, salt), want)
+
+
+def _has_password(conn):
+    return bool(get_setting(conn, 'access_pwd_hash'))
+
+
+def _suggest_password():
+    """给个能念出来的初始密码（避开 0/O、1/l/I）"""
+    letters = 'abcdefghjkmnpqrstuvwxyz'
+    digits = '23456789'
+    body = ''.join(secrets.choice(letters) for _ in range(4)) + \
+        ''.join(secrets.choice(digits) for _ in range(4))
+    return body
+
+
+def _ensure_password():
+    """首次启动生成随机密码，写进 data/访问密码.txt，并在启动横幅里显示"""
+    conn = DB.connect()
+    try:
+        if _has_password(conn):
+            return None
+        pwd = _suggest_password()
+        _set_password(conn, pwd)
+        try:
+            with open(os.path.join(DB.DATA_DIR, '访问密码.txt'), 'w', encoding='utf-8') as f:
+                f.write(f'{APP_NAME} 访问密码：{pwd}\n\n'
+                        '· 手机/电脑第一次打开会要求输入这个密码，输一次记 30 天\n'
+                        '· 想改：进「通知设置 → 访问密码」改\n'
+                        f'· 忘记：删掉本文件里的密码没用，改 data/careplat.db 里 settings 表也行；'
+                        '实在进不去，用 reset.py 重置\n')
+        except OSError:
+            pass
+        return pwd
+    finally:
+        conn.close()
+
+
+def _client_ip():
+    # Cloudflare 隧道会带 CF-Connecting-IP / X-Forwarded-For
+    return (request.headers.get('CF-Connecting-IP')
+            or (request.headers.get('X-Forwarded-For', '').split(',')[0].strip())
+            or request.remote_addr or '-')
+
+
+OPEN_PATHS = ('/login', '/logout', '/api/health', '/favicon.ico')
+
+
+@app.before_request
+def _auth_gate():
+    """除登录页和静态资源外，一律要登录（公网暴露时防止病历裸奔）"""
+    p = request.path
+    if os.environ.get('CAREPLAT_NO_AUTH') == '1':   # 仅自检/调试用
+        return None
+    if p.startswith('/static/') or p in OPEN_PATHS:
+        return None
+    conn = DB.get_db()
+    if not _has_password(conn):          # 没设密码就是局域网模式
+        return None
+    if session.get('auth_ok'):
+        return None
+    if p.startswith('/api/'):
+        return jsonify({'ok': False, 'error': '未登录或登录已过期，请刷新页面重新输入密码',
+                        'need_login': True}), 401
+    return redirect(url_for('login_page', next=p))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    conn = DB.get_db()
+    if not _has_password(conn):
+        return redirect(url_for('index'))
+    err = None
+    if request.method == 'POST':
+        ip = _client_ip()
+        rec = LOGIN_FAIL.get(ip)
+        now = time.time()
+        if rec and rec[0] >= LOGIN_MAX_FAIL and now - rec[1] < LOGIN_LOCK_SEC:
+            err = f'试太多次了，{int((LOGIN_LOCK_SEC - (now - rec[1])) / 60) + 1} 分钟后再来'
+        elif _check_password(conn, (request.form.get('pwd') or '').strip()):
+            LOGIN_FAIL.pop(ip, None)
+            session.permanent = True
+            session['auth_ok'] = True
+            nxt = request.args.get('next') or request.form.get('next') or url_for('index')
+            if not nxt.startswith('/') or nxt.startswith('//'):
+                nxt = url_for('index')
+            return redirect(nxt)
+        else:
+            if not rec or now - rec[1] >= LOGIN_LOCK_SEC:
+                LOGIN_FAIL[ip] = [1, now]
+            else:
+                rec[0] += 1
+            err = '密码不对，再想想（提示：在电脑上的 data/访问密码.txt 里）'
+    return render_template('login.html', err=err, nxt=request.args.get('next', ''))
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login_page'))
+
+
+@app.route('/api/health')
+def api_health():
+    return jsonify({'ok': True, 'app': APP_NAME, 'version': APP_VERSION,
+                    'time': datetime.now().isoformat(timespec='seconds')})
 
 
 # ---------------------------------------------------------------- 首页
@@ -1645,7 +1803,33 @@ def settings_page():
         'SELECT n.*, p.name FROM notify_log n LEFT JOIN patients p ON p.id=n.patient_id'
         ' ORDER BY n.sent_at DESC LIMIT 30').fetchall()]
     return render_template('settings.html', cfg=cfg, logs=logs,
-                           cats=NOTIFY_CATS, sent=APP_NAME)
+                           cats=NOTIFY_CATS, sent=APP_NAME,
+                           has_pwd=_has_password(conn),
+                           pwd_file=os.path.join(DB.DATA_DIR, '访问密码.txt'))
+
+
+@app.route('/api/settings/password', methods=['POST'])
+def api_settings_password():
+    """改访问密码：要先验旧密码，防止别人拿到手机就改锁"""
+    conn = DB.get_db()
+    j = request.get_json(silent=True) or {}
+    old = (j.get('old') or '').strip()
+    new = (j.get('new') or '').strip()
+    if not _check_password(conn, old):
+        return jsonify({'ok': False, 'error': '原密码不对'})
+    if len(new) < 4:
+        return jsonify({'ok': False, 'error': '新密码至少 4 位（建议 8 位以上，别用生日）'})
+    if new.isdigit() and len(new) < 6:
+        return jsonify({'ok': False, 'error': '纯数字至少 6 位'})
+    _set_password(conn, new)
+    session.permanent = True
+    session['auth_ok'] = True           # 自己改完不用重新登录
+    try:
+        with open(os.path.join(DB.DATA_DIR, '访问密码.txt'), 'w', encoding='utf-8') as f:
+            f.write(f'{APP_NAME} 访问密码：{new}\n\n· 手机电脑第一次打开要输这个密码，记 30 天\n')
+    except OSError:
+        pass
+    return jsonify({'ok': True})
 
 
 @app.route('/api/settings', methods=['POST'])
@@ -1820,22 +2004,30 @@ if __name__ == '__main__':
     start_notify_loop()
     port = int(os.environ.get('CAREPLAT_PORT', 5810))
     ip = lan_ip()
+    try:
+        _c = DB.connect()
+        pwd = '已启用（见 data/访问密码.txt）' if get_setting(_c, 'access_pwd_hash') else '未设置'
+        _c.close()
+    except Exception:
+        pwd = '见 data/访问密码.txt'
     banner = (
-        '\n' + '=' * 60 + '\n'
+        '\n' + '=' * 62 + '\n'
         f'  {APP_NAME} {APP_VERSION} 已启动\n'
         f'  作者：      {AUTHOR["name"]}（{AUTHOR["email"]}）\n'
         f'  本机访问：  http://127.0.0.1:{port}\n'
         f'  局域网访问：http://{ip}:{port}   （手机连同一 WiFi 打开这个）\n'
-        f'  ⚠️ 只在家庭局域网用，不要做端口映射到公网（无登录）\n'
+        f'  访问密码：  {pwd}\n'
+        f'  公网访问：  双击「启动公网访问.bat」（电脑要开着）\n'
         f'  启动时间：  {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n'
-        + '=' * 60
+        + '=' * 62
     )
     print(banner)
 
     try:
         with open(os.path.join(DB.DATA_DIR, '访问地址.txt'), 'w', encoding='utf-8') as f:
             f.write(banner.strip() + '\n\n手机装到桌面：用局域网地址打开 → 浏览器菜单选「安装应用 / 添加到主屏幕」\n'
-                    '⚠️ 本平台无登录，仅供家庭局域网使用，不要映射到公网。\n')
+                    '公网访问：双击「启动公网访问.bat」，屏幕会给出 https://xxx.trycloudflare.com 地址\n'
+                    '（域名每次启动会变；平台有访问密码，密码在 data/访问密码.txt）\n')
     except OSError:
         pass
 

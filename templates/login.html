@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F766E">
+<meta name="robots" content="noindex, nofollow">
+<title>输入访问密码 · 照护管理平台</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+<style>
+  html, body { height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(150deg, #134E4A 0%, #0F766E 55%, #0D9488 100%);
+    padding: 20px;
+  }
+  .gate {
+    width: 100%; max-width: 380px; background: #fff; border-radius: 18px;
+    padding: 30px 26px 24px; box-shadow: 0 24px 60px rgba(6, 40, 38, .35);
+  }
+  .gate .icon { font-size: 34px; line-height: 1; }
+  .gate h1 { font-size: 21px; font-weight: 700; margin: 12px 0 4px; color: #0F172A; letter-spacing: -.2px; }
+  .gate p.hint { font-size: 13.5px; color: #64748B; margin: 0 0 18px; line-height: 1.6; }
+  .gate input[type=password] {
+    font-size: 17px; padding: 12px 14px; border-radius: 11px;
+    letter-spacing: 1px; text-align: center;
+  }
+  .gate input[type=password]:focus {
+    border-color: #0F766E; box-shadow: 0 0 0 3px rgba(15,118,110,.15);
+  }
+  .btn-go {
+    background: #0F766E; border: none; color: #fff; font-weight: 600;
+    padding: 12px; border-radius: 11px; width: 100%; font-size: 16px;
+  }
+  .btn-go:hover { background: #115E59; color: #fff; }
+  .err {
+    background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
+    border-radius: 10px; padding: 9px 12px; font-size: 13.5px; margin-bottom: 14px;
+  }
+  .foot { margin-top: 16px; font-size: 12px; color: #94A3B8; text-align: center; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <form class="gate" method="post" autocomplete="off">
+    <div class="icon">🩺</div>
+    <h1>照护管理平台</h1>
+    <p class="hint">这里存的是病人照护记录，需要密码才能进。<br>输过一次，这台设备记 30 天。</p>
+
+    {% if err %}<div class="err">⚠️ {{ err }}</div>{% endif %}
+
+    <input type="hidden" name="next" value="{{ nxt }}">
+    <input class="form-control mb-3" type="password" name="pwd" id="pwd"
+           placeholder="访问密码" autofocus required autocomplete="current-password">
+
+    <button class="btn btn-go" type="submit">进入</button>
+
+    <div class="foot">
+      密码在服务所在电脑的 <b>data/访问密码.txt</b> 里<br>
+      忘了就让管理员在「通知设置」里重设
+    </div>
+  </form>
+</body>
+</html>

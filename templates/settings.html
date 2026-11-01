@@ -73,6 +73,39 @@
         <div id="settingsMsg" class="small mt-2"></div>
       </div>
     </div>
+
+    <div class="card mb-3">
+      <div class="card-header">🔒 访问密码 <span class="sub">公网访问的唯一门锁</span></div>
+      <div class="card-body">
+        <div class="small text-muted mb-3">
+          {% if has_pwd %}
+          已启用。任何设备打开平台都要先输这个密码，输一次记 30 天。
+          密码存在服务电脑的 <code>data/访问密码.txt</code>。
+          {% else %}
+          未设置密码 —— 只能在家里局域网用，<b class="text-danger">不要暴露到公网</b>。
+          {% endif %}
+        </div>
+        <div class="row g-2">
+          <div class="col-sm-5">
+            <label class="form-label">原密码</label>
+            <input type="password" class="form-control form-control-sm" id="pwd_old" placeholder="当前密码">
+          </div>
+          <div class="col-sm-5">
+            <label class="form-label">新密码</label>
+            <input type="password" class="form-control form-control-sm" id="pwd_new" placeholder="建议 8 位以上">
+          </div>
+          <div class="col-sm-2 d-flex align-items-end">
+            <button class="btn btn-outline-brand btn-sm w-100" onclick="changePwd()">改</button>
+          </div>
+        </div>
+        <div id="pwdMsg" class="small mt-2"></div>
+        <div class="mt-3 pt-3 border-top small text-muted">
+          当前设备：
+          <a href="{{ url_for('logout') }}" class="link-danger">退出登录</a>
+          （公共/他人手机上用完记得退）
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="col-lg-5">
@@ -140,8 +173,7 @@ function saveSettings() {
     else m.innerHTML = '<span class="text-danger">❌ ' + (res.error || '失败') + '</span>';
   }).catch(function () { alert('网络错误'); });
 }
-function testMail() {
-  var m = document.getElementById('settingsMsg');
+function testMail() {  var m = document.getElementById('settingsMsg');
   m.innerHTML = '<span class="text-muted">发送中……</span>';
   fetch('/api/settings', {
     method: 'POST',
@@ -153,6 +185,27 @@ function testMail() {
     if (res.ok) m.innerHTML = '<span class="text-success">✅ 测试邮件已发出，去收件箱看看（留意垃圾邮件）</span>';
     else m.innerHTML = '<span class="text-danger">❌ ' + (res.error || '发送失败') + '</span>';
   }).catch(function (e) { m.innerHTML = '<span class="text-danger">❌ 网络错误</span>'; });
+}
+
+function changePwd() {
+  var m = document.getElementById('pwdMsg');
+  var oldP = document.getElementById('pwd_old').value;
+  var newP = document.getElementById('pwd_new').value;
+  if (!newP) { m.innerHTML = '<span class="text-danger">新密码不能空</span>'; return; }
+  m.innerHTML = '<span class="text-muted">保存中……</span>';
+  fetch('/api/settings/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ old: oldP, new: newP })
+  }).then(function (r) { return r.json(); }).then(function (res) {
+    if (res.ok) {
+      m.innerHTML = '<span class="text-success">✅ 已改。其他设备下次打开要用新密码</span>';
+      document.getElementById('pwd_old').value = '';
+      document.getElementById('pwd_new').value = '';
+    } else {
+      m.innerHTML = '<span class="text-danger">❌ ' + (res.error || '失败') + '</span>';
+    }
+  }).catch(function () { m.innerHTML = '<span class="text-danger">❌ 网络错误</span>'; });
 }
 </script>
 {% endblock %}

@@ -14,6 +14,7 @@ from datetime import date, timedelta
 _TMP = tempfile.mkdtemp(prefix='careplat_selftest_')
 os.environ['CAREPLAT_DB'] = os.path.join(_TMP, 'test.db')
 os.environ['CAREPLAT_UPLOADS'] = os.path.join(_TMP, 'uploads')
+os.environ['CAREPLAT_NO_AUTH'] = '1'      # 自检用 test_client 走免密（登录门单独测）
 
 import app as A          # noqa: E402  必须在环境变量之后
 import care              # noqa: E402
@@ -269,6 +270,49 @@ def main():
     conn.close()
     r = c.post('/api/settings/test')
     check('未配 SMTP 时测试被拒', r.status_code == 400)
+
+    print('\n== 12. 访问密码（登录门） ==')
+    conn = DB.connect()
+    A._set_password(conn, 'test1234')
+    conn.close()
+    # 临时关掉免密开关，模拟公网访问
+    os.environ.pop('CAREPLAT_NO_AUTH', None)
+    try:
+        gate = A.app.test_client()
+        r = gate.get('/')
+        check('未登录访问首页 → 跳登录页', r.status_code == 302 and '/login' in r.headers['Location'],
+              f'got {r.status_code} {r.headers.get("Location")}')
+        r = gate.get('/api/health')
+        check('/api/health 免密放行', r.status_code == 200)
+        r = gate.post('/api/checkin', json={'patient_id': 1, 'type': 'water'})
+        check('未登录调 API → 401 JSON', r.status_code == 401 and r.get_json().get('need_login'))
+        r = gate.post('/login', data={'pwd': 'wrong'})
+        check('密码错 → 提示且不进门', r.status_code == 200 and '密码不对'.encode() in r.data, r.status_code)
+        r = gate.post('/login', data={'pwd': 'test1234'})
+        check('密码对 → 跳首页', r.status_code == 302, r.status_code)
+        r = gate.get('/')
+        check('登录后访问首页 → 200', r.status_code == 200, r.status_code)
+        r = gate.get('/logout')
+        r = gate.get('/patients')
+        check('退出后又被拦', r.status_code == 302 and '/login' in r.headers['Location'])
+        # 连错 5 次锁 10 分钟
+        gate2 = A.app.test_client()
+        for _ in range(5):
+            gate2.post('/login', data={'pwd': 'x'}, environ_base={'REMOTE_ADDR': '9.9.9.9'})
+        r = gate2.post('/login', data={'pwd': 'test1234'}, environ_base={'REMOTE_ADDR': '9.9.9.9'})
+        check('连错 5 次 → 锁定', '试太多次'.encode() in r.data)
+        A.LOGIN_FAIL.clear()
+        # 改密码
+        gc = A.app.test_client()
+        gc.post('/login', data={'pwd': 'test1234'})
+        r = gc.post('/api/settings/password', json={'old': 'bad', 'new': 'abcdefg1'})
+        check('改密码：旧密码错被拒', r.status_code == 200 and not r.get_json()['ok'])
+        r = gc.post('/api/settings/password', json={'old': 'test1234', 'new': 'abcdefg1'})
+        check('改密码：旧密码对成功', r.get_json()['ok'])
+        r = gc.post('/login', data={'pwd': 'abcdefg1'})
+        check('新密码可登录', r.status_code == 302)
+    finally:
+        os.environ['CAREPLAT_NO_AUTH'] = '1'
 
     print(f'\n========== 结果：{OK} 通过 / {len(FAIL)} 失败 ==========')
     if FAIL:

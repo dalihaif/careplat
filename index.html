@@ -132,7 +132,8 @@
     <div class="tags">
       <span class="tag">Flask + SQLite</span>
       <span class="tag">离线可用</span>
-      <span class="tag">免登录 · 局域网</span>
+      <span class="tag">访问密码</span>
+      <span class="tag">可开公网隧道</span>
       <span class="tag">exe 单文件可跑</span>
       <span class="tag">开源 · GitHub</span>
     </div>
@@ -166,7 +167,7 @@ python app.py</pre>
       <div class="step">
         <div class="n">3</div>
         <h4>浏览器打开</h4>
-        <p>本机用下面地址；手机连同一个 WiFi，把 127.0.0.1 换成电脑的局域网 IP。</p>
+        <p>本机用下面地址；手机连同一个 WiFi，把 127.0.0.1 换成电脑的局域网 IP。第一次打开输访问密码。</p>
         <pre><span class="g">http://127.0.0.1:5810</span></pre>
       </div>
     </div>
@@ -213,7 +214,8 @@ python app.py</pre>
     <div class="warn">
       <h4>这是「家庭内部工具」，不是医疗系统</h4>
       <ul>
-        <li><b>没有登录密码</b>：只能在家里局域网用，<b>绝对不要</b>做端口映射/内网穿透暴露到公网——里面有病人姓名、病历、用药。</li>
+        <li><b>有访问密码</b>：首次启动自动生成，存在服务电脑的 <span class="mono">data/访问密码.txt</span>，输一次记 30 天；连错 5 次锁 10 分钟。</li>
+        <li><b>要远程看</b>：双击「启动公网访问.bat」，走 Cloudflare 隧道拿一个 <span class="mono">https://xxx.trycloudflare.com</span> 地址（每次启动会变，电脑要开着）。<b>不要自己去做端口映射</b>。</li>
         <li><b>不是诊断工具</b>：体征参考区间是科普常识，异常提示只提醒你「该问医生了」，不能代替医生判断。</li>
         <li><b>数据在本机</b>：数据库就是 <span class="mono">data/careplat.db</span> 一个文件，照片视频在同目录 <span class="mono">uploads/</span>。<b>备份要两个一起拷</b>，只拷 db 会丢照片。</li>
         <li><b>换电脑</b>：把整个程序文件夹拷过去即可，数据跟着走。</li>
