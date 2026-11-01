@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>照护管理平台 · 护工记，家属看</title>
+<meta name="description" content="照护管理平台：卧床、康复、慢病病人的照护打卡、用药提醒、体征趋势、康复训练、日记与记账。Flask + SQLite，全本地离线运行。">
+<style>
+  :root{
+    --brand:#0F766E; --brand-d:#115E59; --brand-l:#CCFBF1;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --line:#E2E8F0; --bg:#F8FAFC; --card:#FFFFFF;
+    --warn-bg:#FFF7ED; --warn-line:#FDBA74; --warn-ink:#9A3412;
+    --ok:#059669;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.65; font-size:16px;
+  }
+  a{color:var(--brand); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px; margin:0 auto; padding:0 20px}
+
+  /* ---------- 顶部 ---------- */
+  header{
+    background:linear-gradient(135deg,#134E4A 0%,#0F766E 55%,#0D9488 100%);
+    color:#fff; padding:52px 0 56px; position:relative; overflow:hidden;
+  }
+  header::after{
+    content:""; position:absolute; right:-90px; top:-90px; width:320px; height:320px;
+    background:radial-gradient(circle,rgba(255,255,255,.14),transparent 62%); border-radius:50%;
+  }
+  .kicker{
+    display:inline-block; font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.24);
+    padding:5px 12px; border-radius:999px; margin-bottom:18px;
+  }
+  h1{margin:0 0 12px; font-size:40px; line-height:1.2; letter-spacing:-.5px; font-weight:700}
+  .lead{margin:0; font-size:18px; color:rgba(255,255,255,.9); max-width:640px}
+  .tags{margin-top:26px; display:flex; gap:8px; flex-wrap:wrap}
+  .tag{
+    font-size:13px; padding:5px 11px; border-radius:8px;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18);
+  }
+  @media (max-width:640px){ h1{font-size:30px} header{padding:38px 0 40px} .lead{font-size:16px} }
+
+  /* ---------- 提示条 ---------- */
+  .notice{
+    background:var(--warn-bg); border:1px solid var(--warn-line); border-left-width:5px;
+    color:var(--warn-ink); border-radius:12px; padding:18px 20px; margin:-28px 0 34px;
+    box-shadow:0 8px 24px rgba(15,23,42,.07); position:relative; z-index:2;
+  }
+  .notice h3{margin:0 0 8px; font-size:17px}
+  .notice p{margin:6px 0; font-size:15px}
+  .notice code{background:rgba(154,52,18,.09); padding:2px 6px; border-radius:5px; font-size:13.5px}
+
+  /* ---------- 通用区块 ---------- */
+  section{margin:0 0 46px}
+  h2{font-size:23px; margin:0 0 6px; letter-spacing:-.2px}
+  .sub{color:var(--ink-2); margin:0 0 20px; font-size:15px}
+
+  /* ---------- 步骤 ---------- */
+  .steps{display:grid; gap:14px; grid-template-columns:repeat(3,1fr)}
+  @media (max-width:760px){ .steps{grid-template-columns:1fr} }
+  .step{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px;
+    position:relative;
+  }
+  .step .n{
+    width:28px; height:28px; border-radius:8px; background:var(--brand-l); color:var(--brand-d);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; margin-bottom:12px;
+  }
+  .step h4{margin:0 0 6px; font-size:16px}
+  .step p{margin:0; font-size:14px; color:var(--ink-2)}
+  pre{
+    background:#0F172A; color:#E2E8F0; padding:12px 14px; border-radius:10px;
+    overflow-x:auto; font-size:13px; line-height:1.7; margin:10px 0 0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  pre .c{color:#94A3B8}
+  pre .g{color:#5EEAD4}
+
+  /* ---------- 功能网格 ---------- */
+  .grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+  .feat{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;
+    transition:border-color .15s, transform .15s;
+  }
+  .feat:hover{border-color:#99F6E4; transform:translateY(-2px)}
+  .feat .ico{font-size:20px; line-height:1}
+  .feat h4{margin:8px 0 4px; font-size:15px}
+  .feat p{margin:0; font-size:13.5px; color:var(--ink-2)}
+
+  /* ---------- 桌面/手机 ---------- */
+  .row2{display:grid; gap:16px; grid-template-columns:1fr 1fr}
+  @media (max-width:760px){ .row2{grid-template-columns:1fr} }
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px}
+  .panel h4{margin:0 0 8px; font-size:16px}
+  .panel p{margin:0 0 8px; font-size:14.5px; color:var(--ink-2)}
+  .panel .big{
+    font-family:ui-monospace,Menlo,Consolas,monospace; font-size:15px; color:var(--brand-d);
+    background:var(--brand-l); padding:8px 12px; border-radius:8px; display:inline-block; margin:4px 0;
+  }
+
+  /* ---------- 警示 ---------- */
+  .warn{
+    background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:18px 20px;
+    color:#7F1D1D;
+  }
+  .warn h4{margin:0 0 8px; font-size:16px}
+  .warn ul{margin:6px 0 0; padding-left:20px; font-size:14.5px}
+  .warn li{margin:4px 0}
+
+  footer{
+    border-top:1px solid var(--line); background:#fff; margin-top:10px;
+    padding:26px 0 34px; color:var(--ink-2); font-size:14px;
+  }
+  footer .who{color:var(--ink); font-weight:600}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">CarePlat · v1.0</div>
+    <h1>照护管理平台</h1>
+    <p class="lead">护工记，家属看。<br>卧床、康复、慢病病人的照护任务打卡、用药提醒、体征趋势、康复训练、日记与记账——全在本地一台电脑上跑，数据不出门。</p>
+    <div class="tags">
+      <span class="tag">Flask + SQLite</span>
+      <span class="tag">离线可用</span>
+      <span class="tag">免登录 · 局域网</span>
+      <span class="tag">exe 单文件可跑</span>
+      <span class="tag">开源 · GitHub</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="notice">
+    <h3>⚠️ 这个网址看到的是项目主页，不是平台本身</h3>
+    <p>GitHub Pages 只能放<b>静态网页</b>（HTML/CSS/图片）。本平台背后是 Python 服务 + SQLite 数据库，<b>Pages 跑不了后端，所以页面点不进去功能</b>。</p>
+    <p>要用它，得在一台电脑上启动服务，然后用浏览器访问那台电脑。<b>三分钟能起，见下方步骤。</b></p>
+  </div>
+
+  <section>
+    <h2>三步开始使用</h2>
+    <p class="sub">Windows 电脑，装过一次以后每次双击即可</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">1</div>
+        <h4>拿到程序</h4>
+        <p>用打包版最省事：解压 <b>照护管理平台</b> 文件夹，里面就一个 <b>.exe</b>，不用装 Python。</p>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <h4>双击启动</h4>
+        <p>双击 exe（或源码版的 <b>启动服务.bat</b>），出现黑窗口<b>别关</b>，它就是服务本体。</p>
+        <pre><span class="c"># 源码版也可以命令行起</span>
+python app.py</pre>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <h4>浏览器打开</h4>
+        <p>本机用下面地址；手机连同一个 WiFi，把 127.0.0.1 换成电脑的局域网 IP。</p>
+        <pre><span class="g">http://127.0.0.1:5810</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>电脑、手机都能看</h2>
+    <p class="sub">同一个 WiFi 下，手机浏览器直接开，不用装 App</p>
+    <div class="row2">
+      <div class="panel">
+        <h4>🖥 这台电脑</h4>
+        <p>启动服务后打开：</p>
+        <div class="big">http://127.0.0.1:5810</div>
+      </div>
+      <div class="panel">
+        <h4>📱 手机 / 平板</h4>
+        <p>先查电脑的局域网 IP（命令行输 <span class="mono">ipconfig</span>），手机连同一个 WiFi 再访问：</p>
+        <div class="big">http://192.168.1.x:5810</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>它管什么</h2>
+    <p class="sub">按「照护等级」自动排任务，不是让你自己记</p>
+    <div class="grid">
+      <div class="feat"><div class="ico">📋</div><h4>今日照护</h4><p>卧床自动排每 2 小时翻身、三餐、饮水、皮肤检查；点一下就算打卡</p></div>
+      <div class="feat"><div class="ico">💊</div><h4>用药管理</h4><p>一药一行、一天多时段；过了点没打卡就报「漏服」</p></div>
+      <div class="feat"><div class="ico">🩺</div><h4>体征趋势</h4><p>血压、血糖、体温、血氧等 7 项，画趋势图，超标分级提醒</p></div>
+      <div class="feat"><div class="ico">🦵</div><h4>康复训练</h4><p>项目、时长、完成组数，看得到进步曲线</p></div>
+      <div class="feat"><div class="ico">🗂</div><h4>医疗档案</h4><p>就诊记录、诊断、用药调整；复诊自动提醒</p></div>
+      <div class="feat"><div class="ico">📖</div><h4>照护日记</h4><p>文字 + 照片 + 视频，按天归档，家属随时翻</p></div>
+      <div class="feat"><div class="ico">💰</div><h4>记账</h4><p>药费、护理费、耗材，可导出 CSV</p></div>
+      <div class="feat"><div class="ico">📊</div><h4>周报转发</h4><p>一键生成纯文本周报，复制 / 邮件 / 下载给外地家人</p></div>
+      <div class="feat"><div class="ico">📧</div><h4>邮件通知</h4><p>漏药、翻身超时、体征异常自动发家属邮箱，一天最多一封</p></div>
+      <div class="feat"><div class="ico">🖨</div><h4>床头卡</h4><p>A4 打印：用药时间表、急症清单、大字紧急电话，贴床头</p></div>
+      <div class="feat"><div class="ico">🧾</div><h4>复诊清单</h4><p>证件、在服药品单、最近体征、想问医生的问题，打印带走</p></div>
+      <div class="feat"><div class="ico">💾</div><h4>备份</h4><p>在线备份数据库 + 照片视频，自动留最近 14 份，可备到 NAS</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>⚠️ 使用前必须知道</h2>
+    <div class="warn">
+      <h4>这是「家庭内部工具」，不是医疗系统</h4>
+      <ul>
+        <li><b>没有登录密码</b>：只能在家里局域网用，<b>绝对不要</b>做端口映射/内网穿透暴露到公网——里面有病人姓名、病历、用药。</li>
+        <li><b>不是诊断工具</b>：体征参考区间是科普常识，异常提示只提醒你「该问医生了」，不能代替医生判断。</li>
+        <li><b>数据在本机</b>：数据库就是 <span class="mono">data/careplat.db</span> 一个文件，照片视频在同目录 <span class="mono">uploads/</span>。<b>备份要两个一起拷</b>，只拷 db 会丢照片。</li>
+        <li><b>换电脑</b>：把整个程序文件夹拷过去即可，数据跟着走。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>技术栈</h2>
+    <p class="sub">为「没网也能用、老人家里也能跑」选的，没有任何云依赖</p>
+    <div class="grid">
+      <div class="feat"><div class="ico">🐍</div><h4>Flask + waitress</h4><p>Python 后端，8 线程，Windows 上稳</p></div>
+      <div class="feat"><div class="ico">🗄</div><h4>SQLite 单文件</h4><p>整个库就是一个 .db，拷贝即备份</p></div>
+      <div class="feat"><div class="ico">🎨</div><h4>Bootstrap 5 + Chart.js</h4><p>UI 与图表全部本地化，断网照常显示</p></div>
+      <div class="feat"><div class="ico">📦</div><h4>PyInstaller</h4><p>打包成 exe，目标机不用装 Python</p></div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div><span class="who">李海峰</span> · 大理大学附属医院 · <a href="mailto:dalihaif@qq.com">dalihaif@qq.com</a> · <a href="https://github.com/dalihaif">github.com/dalihaif</a></div>
+    <div style="margin-top:6px;color:var(--ink-3);font-size:13px">照护管理平台 CarePlat v1.0 · 仅供家庭照护场景使用 · 本项目源码在 GitHub（私有仓库）</div>
+  </div>
+</footer>
+
+</body>
+</html>
